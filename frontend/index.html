@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bens Trans - Home</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="logo.jpeg">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/navigation.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="about.html">
+            <div class="nav-logo">
+                <img src="logo.jpeg" alt="Bens Trans Logo" style="height: 40px; margin-right: 10px; vertical-align: middle; border-radius: 5px;">
+                <h2 style="display: inline-block; vertical-align: middle;">Bens Trans</h2>
+            </div>
+            </a>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link active">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="services.html" class="nav-link">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a href="about.html" class="nav-link">About</a>
+                </li>
+                <li class="nav-item">
+                    <a href="contact.html" class="nav-link">Contact</a>
+                </li>
+                <li class="nav-item">
+                    <a href="login.html" class="nav-link login-btn">Login</a>
+                </li>
+                <li class="nav-item">
+                    <a href="register.html" class="nav-link register-btn">Register</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-image">
+    <img
+        id="heroImage"
+        src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=2069&q=80"
+        alt="Modern Bus Fleet"
+        class="hero-bg-image"
+    >
+    <div class="hero-overlay"></div>
+</div>
+            <div class="hero-content">
+                <h1>Welcome to Bens Trans</h1>
+                <p>Your reliable partner for comfortable and safe transportation across Kenya</p>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number">500+</span>
+                        <span class="stat-label">Daily Trips</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">50+</span>
+                        <span class="stat-label">Modern Vehicles</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">10K+</span>
+                        <span class="stat-label">Happy Customers</span>
+                    </div>
+                </div>
+                <div class="hero-buttons">
+                    <a href="book-now.html" class="btn btn-primary">Book Your Trip</a>
+                    <a href="routes.html" class="btn btn-secondary">View Routes</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features">
+            <div class="container">
+                <h2>Why Choose Bens Trans?</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h3>🚌 Comfortable Vehicles</h3>
+                        <p>Modern, well-maintained vehicles for your comfort</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>⏰ On-Time Service</h3>
+                        <p>Reliable schedules you can count on</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>💰 Affordable Prices</h3>
+                        <p>Competitive rates for all destinations</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📱 Easy Booking</h3>
+                        <p>Simple online booking system</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Booking Section -->
+        <section class="quick-booking">
+            <div class="container">
+                <div class="card">
+                    <h2>Quick Route Search</h2>
+                    <form id="quickSearchForm">
+                        <div class="search-grid">
+                            <input type="text" placeholder="From" id="quickFrom" required>
+                            <input type="text" placeholder="To" id="quickTo" required>
+                            <input type="date" id="quickDate" required>
+                            <button type="submit" class="btn">Search Routes</button>
+                        </div>
+                    </form>
+                    <p class="search-note">* Browse vehicles and seats without login. Registration required only for payment.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="container">
+                <div class="footer-grid">
+                    <!-- Company Info -->
+                    <div class="footer-section">
+                        <div class="footer-logo">
+                            <h3>Bens Trans</h3>
+                            <p>Your reliable partner for comfortable and safe transportation across Kenya.</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Links -->
+                    <div class="footer-section">
+                        <h4>Quick Links</h4>
+                        <ul class="footer-links">
+                            <li><a href="index.html">Home</a></li>
+                            <li><a href="services.html">Services</a></li>
+                            <li><a href="about.html">About</a></li>
+                            <li><a href="contact.html">Contact</a></li>
+                            <li><a href="register.html">Book Now</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <div class="footer-section">
+                        <h4>Contact Us</h4>
+                        <div class="contact-info">
+                            <div class="contact-item">
+                                <span class="contact-icon">📞</span>
+                                <div>
+                                    <p>+254 748 648 015</p>
+                                </div>
+                            </div>
+                            <div class="contact-item">
+                                <span class="contact-icon">✉️</span>
+                                <div>
+                                    <p>info@benstrans.com</p>
+                                </div>
+                            </div>
+                            <div class="contact-item">
+                                <span class="contact-icon">📱</span>
+                                <div>
+                                    <p>M-Pesa Payments</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Bottom -->
+        <div class="footer-bottom">
+            <div class="container">
+                <div class="footer-bottom-content">
+                    <div class="footer-copyright">
+                        <p>&copy; 2024 Bens Trans. All rights reserved.</p>
+                    </div>
+                    <div class="footer-legal">
+                        <a href="contact.html" class="legal-link">Support</a>
+                        <a href="#" class="legal-link">Privacy Policy</a>
+                        <a href="#" class="legal-link">Terms of Service</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/navigation.js"></script>
+    <script>
+        // Set minimum date to tomorrow (24 hours from now)
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('quickDate').min = tomorrow.toISOString().split('T')[0];
+        
+        // Quick search form - redirect to booking page with search params
+        document.getElementById('quickSearchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const from = document.getElementById('quickFrom').value.trim();
+            const to = document.getElementById('quickTo').value.trim();
+            const date = document.getElementById('quickDate').value;
+            
+            // Redirect to booking page with pre-filled search
+            window.location.href = `book-now.html?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${date}`;
+        });
+        
+        // Newsletter subscription (if exists)
+        const newsletterBtn = document.querySelector('.newsletter-btn');
+        if (newsletterBtn) {
+            newsletterBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const emailInput = document.querySelector('.newsletter-input');
+                const email = emailInput.value.trim();
+                
+                if (!email) {
+                    alert('Please enter your email address');
+                    return;
+                }
+                
+                if (!isValidEmail(email)) {
+                    alert('Please enter a valid email address');
+                    return;
+                }
+                
+                // Simulate newsletter subscription
+                alert('Thank you for subscribing! You will receive updates about our latest routes and offers.');
+                emailInput.value = '';
+            });
+        }
+        
+        // Email validation function
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+        
+        // Social media links (if exists)
+        document.querySelectorAll('.social-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const platform = e.target.textContent.split(' ')[1];
+                alert(`Follow us on ${platform}! (Link will be added soon)`);
+            });
+        });
+    </script>
+    <script>
+const images = [
+    "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=2069&q=80",
+    "https://images.unsplash.com/photo-1525104698733-6c5d11b5c5c9?auto=format&fit=crop&w=2069&q=80",
+    "https://images.unsplash.com/photo-1509749837427-ac94a2553d0e?auto=format&fit=crop&w=2069&q=80",
+
+    //Added Clear Photo 1
+    "https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=2069&q=80",
+
+    //Added Clear Photo 2
+    "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=2069&q=80",
+    //New Clear Bus 1
+    "https://images.unsplash.com/photo-1519583272095-6433daf26b4e?auto=format&fit=crop&w=2069&q=80",
+
+    //New Clear Bus 2
+    "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=2069&q=80",
+];
+
+let currentIndex = 0;
+const heroImage = document.getElementById("heroImage");
+
+setInterval(() => {
+    heroImage.style.opacity = 0;
+
+    setTimeout(() => {
+        currentIndex = (currentIndex + 1) % images.length;
+        heroImage.src = images[currentIndex];
+        heroImage.style.opacity = 1;
+    }, 1000);
+}, 2000); //to change every 2 seconds
+</script>
+</body>
+</html>

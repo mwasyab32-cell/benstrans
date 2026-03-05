@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Vehicle Registration</title>
+</head>
+<body>
+    <h2>Test Vehicle Registration</h2>
+    <div id="result"></div>
+    
+    <script>
+        // Test if we can reach the API
+        async function testAPI() {
+            try {
+                // First test if server is running
+                const response = await fetch('http://localhost:3000/api/vehicles/trips/search?from=test&to=test&date=2024-01-01');
+                console.log('API reachable:', response.status);
+                
+                // Check if we have a valid token
+                const token = localStorage.getItem('token');
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                
+                console.log('Token:', token ? 'exists' : 'missing');
+                console.log('User:', user);
+                
+                document.getElementById('result').innerHTML = `
+                    <p>API Status: ${response.status}</p>
+                    <p>Token: ${token ? 'exists' : 'missing'}</p>
+                    <p>User Role: ${user.role || 'none'}</p>
+                    <p>User ID: ${user.id || 'none'}</p>
+                `;
+                
+            } catch (error) {
+                console.error('Test failed:', error);
+                document.getElementById('result').innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+        
+        testAPI();
+    </script>
+</body>
+</html>

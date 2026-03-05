@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Booking Endpoint</title>
+</head>
+<body>
+    <h1>Test Guest Booking</h1>
+    <button onclick="testBooking()">Test Booking API</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testBooking() {
+            const testData = {
+                trip_id: 1, // Change this to a valid trip ID
+                seats_booked: 1,
+                seat_numbers: [1],
+                customer_name: 'Test User',
+                customer_email: 'test' + Date.now() + '@example.com',
+                customer_phone: '0712345678',
+                customer_id_number: '12345678'
+            };
+
+            document.getElementById('result').textContent = 'Sending request...';
+
+            try {
+                const response = await fetch('http://localhost:3000/api/bookings/guest', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const data = await response.json();
+                
+                document.getElementById('result').textContent = 
+                    `Status: ${response.status}\n\n` +
+                    `Response:\n${JSON.stringify(data, null, 2)}`;
+
+            } catch (error) {
+                document.getElementById('result').textContent = 
+                    `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

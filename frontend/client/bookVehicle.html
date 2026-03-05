@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Vehicle - Bens Trans</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/booking.css">
+</head>
+<body>
+    <div class="page-overlay"></div>
+    <div class="header">
+        <div class="container">
+            <div class="nav">
+                <div class="logo">
+                <img src="booking system/frontend/mi-6" alt="Bens Trans Logo">
+                <img src="mi-6.jpeg" alt="Bens Trans Logo">
+            </div>
+                <div class="nav-links">
+                    <span id="clientName"></span>
+                    <button class="btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Search & Book Vehicle</h2>
+            
+            <form id="searchForm">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
+                    <div class="form-group">
+                        <label for="from">From:</label>
+                        <input type="text" id="from" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="to">To:</label>
+                        <input type="text" id="to" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="date">Travel Date:</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    
+                    <button type="submit" class="btn">Search</button>
+                </div>
+            </form>
+        </div>
+        
+        <div id="searchResults"></div>
+        
+        <div class="card">
+            <h2>My Bookings</h2>
+            <div id="myBookings"></div>
+        </div>
+        
+        <div id="message"></div>
+    </div>
+    
+    <script src="js/auth.js"></script>
+    <script src="js/booking.js"></script>
+    <script>
+        // Check if user is client
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.role !== 'client') {
+            window.location.href = '../login.html';
+        }
+        
+        document.getElementById('clientName').textContent = user.name;
+        
+        // Set minimum date to today
+        document.getElementById('date').min = new Date().toISOString().split('T')[0];
+        
+        // Search form handler
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const from = document.getElementById('from').value;
+            const to = document.getElementById('to').value;
+            const date = document.getElementById('date').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/vehicles/trips/search?from=${from}&to=${to}&date=${date}`);
+                const trips = await response.json();
+                
+                displaySearchResults(trips);
+            } catch (error) {
+                showMessage('Search failed', 'error');
+            }
+        });
+        
+        function displaySearchResults(trips) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (trips.length === 0) {
+                resultsDiv.innerHTML = '<div class="card"><p>No vehicles found for this route and date.</p></div>';
+                return;
+            }
+            
+            let html = '<div class="card"><h3>Available Vehicles</h3><div class="grid">';
+            
+            trips.forEach(trip => {
+                html += `
+                    <div class="vehicle-card">
+                        <h4>${trip.vehicle_number}</h4>
+                        <div class="route">${trip.route_from} → ${trip.route_to}</div>
+                        <p><strong>Date:</strong> ${trip.travel_date}</p>
+                        <p><strong>Departure:</strong> ${trip.departure_time}</p>
+                        <div class="seats-info">
+                            <strong>Available Seats:</strong> ${trip.remaining_seats}
+                        </div>
+                        <div class="price">KSh ${trip.price}</div>
+                        <div style="margin-top: 15px;">
+                            <input type="number" id="seats_${trip.id}" min="1" max="${trip.remaining_seats}" value="1" style="width: 80px; margin-right: 10px;">
+                            <button class="btn" onclick="bookTrip(${trip.id})">Book Now</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div></div>';
+            resultsDiv.innerHTML = html;
+        }
+        
+        // Book trip function
+        async function bookTrip(tripId) {
+            const seatsInput = document.getElementById(`seats_${tripId}`);
+            const seatsBooked = parseInt(seatsInput.value);
+            
+            if (!seatsBooked || seatsBooked < 1) {
+                showMessage('Please select number of seats', 'error');
+                return;
+            }
+            
+            // Get user's phone number for M-Pesa
+            const phoneNumber = prompt('Enter your M-Pesa phone number (e.g., 0701234567):');
+            if (!phoneNumber) {
+                showMessage('Phone number is required for M-Pesa payment', 'error');
+                return;
+            }
+            
+            try {
+                // First create the booking
+                const bookingResponse = await fetch(`${API_BASE}/bookings`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        trip_id: tripId,
+                        seats_booked: seatsBooked,
+                        phone_number: phoneNumber
+                    })
+                });
+                
+                const bookingData = await bookingResponse.json();
+                
+                if (bookingResponse.ok) {
+                    const booking = bookingData.booking;
+                    showMessage(`Booking created! Total: KSh ${booking.total_amount}`, 'success');
+                    
+                    // Show payment modal
+                    showPaymentModal(booking, phoneNumber);
+                } else {
+                    showMessage(bookingData.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Booking failed', 'error');
+            }
+        }
+        
+        // Show payment modal
+        function showPaymentModal(booking, phoneNumber) {
+            const modal = document.createElement('div');
+            modal.className = 'payment-modal';
+            modal.innerHTML = `
+                <div class="payment-modal-content">
+                    <div class="payment-header">
+                        <h3>Complete Payment</h3>
+                        <span class="close-modal" onclick="closePaymentModal()">&times;</span>
+                    </div>
+                    <div class="booking-summary">
+                        <h4>Booking Summary</h4>
+                        <p><strong>Route:</strong> ${booking.trip_details.route_from} → ${booking.trip_details.route_to}</p>
+                        <p><strong>Vehicle:</strong> ${booking.trip_details.vehicle_number}</p>
+                        <p><strong>Date:</strong> ${booking.trip_details.travel_date}</p>
+                        <p><strong>Time:</strong> ${booking.trip_details.departure_time}</p>
+                        <p><strong>Seats:</strong> ${booking.seats_booked}</p>
+                        <p><strong>Price per seat:</strong> KSh ${booking.trip_details.price_per_seat}</p>
+                        <hr>
+                        <p class="total-amount"><strong>Total Amount: KSh ${booking.total_amount}</strong></p>
+                        <p class="payment-deadline">Payment Deadline: ${new Date(booking.payment_deadline).toLocaleString()}</p>
+                    </div>
+                    <div class="payment-section">
+                        <div class="mpesa-logo">📱 M-Pesa Payment</div>
+                        <p>Phone Number: ${phoneNumber}</p>
+                        <button id="payNowBtn" class="btn btn-success" onclick="initiatePayment(${booking.id}, '${phoneNumber}')">
+                            Pay Now via M-Pesa
+                        </button>
+                        <div id="paymentStatus" class="payment-status"></div>
+                    </div>
+                    <div class="payment-instructions">
+                        <h5>Payment Instructions:</h5>
+                        <ol>
+                            <li>Click "Pay Now via M-Pesa"</li>
+                            <li>Check your phone for M-Pesa prompt</li>
+                            <li>Enter your M-Pesa PIN</li>
+                            <li>Wait for confirmation</li>
+                        </ol>
+                        <p class="note">Note: Payment must be completed at least 24 hours before travel.</p>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+        }
+        
+        // Close payment modal
+        function closePaymentModal() {
+            const modal = document.querySelector('.payment-modal');
+            if (modal) {
+                modal.remove();
+            }
+            loadMyBookings(); // Refresh bookings
+        }
+        
+        // Initiate M-Pesa payment
+        async function initiatePayment(bookingId, phoneNumber) {
+            const payBtn = document.getElementById('payNowBtn');
+            const statusDiv = document.getElementById('paymentStatus');
+            
+            payBtn.disabled = true;
+            payBtn.textContent = 'Processing...';
+            statusDiv.innerHTML = '<div class="loading">Initiating payment...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/payments/initiate`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        booking_id: bookingId,
+                        phone_number: phoneNumber
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.innerHTML = `
+                        <div class="success">
+                            <p>✅ Payment request sent to ${phoneNumber}</p>
+                            <p>Please check your phone and enter your M-Pesa PIN</p>
+                            <div class="payment-progress">
+                                <div class="progress-bar"></div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Start checking payment status
+                    checkPaymentStatus(bookingId, data.checkoutRequestId);
+                } else {
+                    statusDiv.innerHTML = `<div class="error">❌ ${data.error}</div>`;
+                    payBtn.disabled = false;
+                    payBtn.textContent = 'Pay Now via M-Pesa';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="error">❌ Payment initiation failed</div>';
+                payBtn.disabled = false;
+                payBtn.textContent = 'Pay Now via M-Pesa';
+            }
+        }
+        
+        // Check payment status
+        async function checkPaymentStatus(bookingId, checkoutRequestId, attempts = 0) {
+            if (attempts >= 60) { // Stop after 60 attempts (10 minutes)
+                document.getElementById('paymentStatus').innerHTML = `
+                    <div class="warning">
+                        ⏰ Payment verification timeout. Please check your M-Pesa messages or contact support.
+                        <br><button class="btn btn-sm" onclick="checkPaymentStatus(${bookingId}, '${checkoutRequestId}', 0)">Check Again</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/payments/status/${bookingId}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const data = await response.json();
+                
+                if (data.payment_status === 'paid') {
+                    document.getElementById('paymentStatus').innerHTML = `
+                        <div class="success">
+                            <h4>✅ Payment Successful!</h4>
+                            <p><strong>Receipt:</strong> ${data.mpesa_receipt_number || 'Processing...'}</p>
+                            <p>Your booking is confirmed.</p>
+                            <button class="btn" onclick="closePaymentModal()">Close</button>
+                        </div>
+                    `;
+                } else if (data.payment_status === 'failed') {
+                    document.getElementById('paymentStatus').innerHTML = `
+                        <div class="error">
+                            ❌ Payment failed. Please try again.
+                            <button class="btn" onclick="initiatePayment(${bookingId}, '${phoneNumber}')">Retry Payment</button>
+                        </div>
+                    `;
+                } else {
+                    // Still pending, show progress and check again
+                    const progressPercent = Math.min((attempts / 12) * 100, 90); // Show progress up to 90%
+                    document.getElementById('paymentStatus').innerHTML = `
+                        <div class="loading">
+                            <p>⏳ Waiting for payment confirmation... (${attempts + 1}/60)</p>
+                            <div class="payment-progress">
+                                <div class="progress-bar" style="width: ${progressPercent}%"></div>
+                            </div>
+                            <p><small>This is a mock payment system. Payment will complete automatically in ~10 seconds.</small></p>
+                        </div>
+                    `;
+                    
+                    // Check again in 10 seconds for mock system, 5 seconds for real system
+                    setTimeout(() => checkPaymentStatus(bookingId, checkoutRequestId, attempts + 1), 10000);
+                }
+            } catch (error) {
+                console.error('Payment status check failed:', error);
+                // Retry after delay
+                setTimeout(() => checkPaymentStatus(bookingId, checkoutRequestId, attempts + 1), 10000);
+            }
+        }
+        
+        // Load user's bookings
+        async function loadMyBookings() {
+            try {
+                const response = await fetch(`${API_BASE}/bookings/my-bookings`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // User not authenticated, redirect to login
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        window.location.href = '../login.html';
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const bookings = await response.json();
+                
+                // Check if bookings is an array
+                if (!Array.isArray(bookings)) {
+                    console.error('Bookings response is not an array:', bookings);
+                    document.getElementById('myBookings').innerHTML = '<p>Error loading bookings</p>';
+                    return;
+                }
+                
+                if (bookings.length === 0) {
+                    document.getElementById('myBookings').innerHTML = '<p>No bookings found</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table class="table">
+                        <tr>
+                            <th>Vehicle</th>
+                            <th>Route</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Seats</th>
+                            <th>Total</th>
+                            <th>Payment Status</th>
+                            <th>Actions</th>
+                        </tr>
+                `;
+                
+                bookings.forEach(booking => {
+                    const total = booking.seats_booked * booking.price;
+                    const paymentStatus = booking.payment_status || 'pending';
+                    const paymentDeadline = booking.payment_deadline ? new Date(booking.payment_deadline) : null;
+                    const isExpired = paymentDeadline && new Date() > paymentDeadline;
+                    
+                    let statusBadge = '';
+                    let actionButtons = '';
+                    
+                    switch (paymentStatus) {
+                        case 'paid':
+                            statusBadge = '<span class="badge badge-success">Paid</span>';
+                            if (booking.mpesa_receipt_number) {
+                                statusBadge += `<br><small>Receipt: ${booking.mpesa_receipt_number}</small>`;
+                            }
+                            break;
+                        case 'pending':
+                            if (isExpired) {
+                                statusBadge = '<span class="badge badge-danger">Expired</span>';
+                                actionButtons = `<button class="btn btn-sm btn-danger" onclick="cancelBooking(${booking.id})">Cancel</button>`;
+                            } else {
+                                statusBadge = '<span class="badge badge-warning">Payment Pending</span>';
+                                actionButtons = `
+                                    <button class="btn btn-sm btn-success" onclick="payForBooking(${booking.id})">Pay Now</button>
+                                    <button class="btn btn-sm btn-danger" onclick="cancelBooking(${booking.id})">Cancel</button>
+                                `;
+                            }
+                            break;
+                        case 'failed':
+                            statusBadge = '<span class="badge badge-danger">Payment Failed</span>';
+                            actionButtons = `
+                                <button class="btn btn-sm btn-success" onclick="payForBooking(${booking.id})">Retry Payment</button>
+                                <button class="btn btn-sm btn-danger" onclick="cancelBooking(${booking.id})">Cancel</button>
+                            `;
+                            break;
+                    }
+                    
+                    html += `
+                        <tr>
+                            <td>${booking.vehicle_number}</td>
+                            <td>${booking.route_from} → ${booking.route_to}</td>
+                            <td>${booking.travel_date}</td>
+                            <td>${booking.departure_time}</td>
+                            <td>${booking.seats_booked}</td>
+                            <td>KSh ${total}</td>
+                            <td>${statusBadge}</td>
+                            <td>${actionButtons}</td>
+                        </tr>
+                    `;
+                });
+                html += '</table>';
+                
+                document.getElementById('myBookings').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+                document.getElementById('myBookings').innerHTML = '<p>Error loading bookings. Please try again.</p>';
+            }
+        }
+        
+        // Pay for existing booking
+        async function payForBooking(bookingId) {
+            const phoneNumber = prompt('Enter your M-Pesa phone number (e.g., 0701234567):');
+            if (!phoneNumber) {
+                showMessage('Phone number is required for M-Pesa payment', 'error');
+                return;
+            }
+            
+            // Get booking details first
+            try {
+                const response = await fetch(`${API_BASE}/payments/status/${bookingId}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const bookingData = await response.json();
+                
+                if (response.ok) {
+                    const booking = {
+                        id: bookingId,
+                        total_amount: bookingData.total_amount,
+                        payment_deadline: bookingData.payment_deadline
+                    };
+                    
+                    // Show simplified payment modal for existing booking
+                    showExistingBookingPaymentModal(booking, phoneNumber);
+                } else {
+                    showMessage('Failed to get booking details', 'error');
+                }
+            } catch (error) {
+                showMessage('Failed to initiate payment', 'error');
+            }
+        }
+        
+        // Show payment modal for existing booking
+        function showExistingBookingPaymentModal(booking, phoneNumber) {
+            const modal = document.createElement('div');
+            modal.className = 'payment-modal';
+            modal.innerHTML = `
+                <div class="payment-modal-content">
+                    <div class="payment-header">
+                        <h3>Complete Payment</h3>
+                        <span class="close-modal" onclick="closePaymentModal()">&times;</span>
+                    </div>
+                    <div class="booking-summary">
+                        <p class="total-amount"><strong>Total Amount: KSh ${booking.total_amount}</strong></p>
+                        <p class="payment-deadline">Payment Deadline: ${new Date(booking.payment_deadline).toLocaleString()}</p>
+                    </div>
+                    <div class="payment-section">
+                        <div class="mpesa-logo">📱 M-Pesa Payment</div>
+                        <p>Phone Number: ${phoneNumber}</p>
+                        <button id="payNowBtn" class="btn btn-success" onclick="initiatePayment(${booking.id}, '${phoneNumber}')">
+                            Pay Now via M-Pesa
+                        </button>
+                        <div id="paymentStatus" class="payment-status"></div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+        }
+        
+        // Cancel booking
+        async function cancelBooking(bookingId) {
+            if (!confirm('Are you sure you want to cancel this booking?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/payments/cancel/${bookingId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Booking cancelled successfully', 'success');
+                    loadMyBookings();
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Failed to cancel booking', 'error');
+            }
+        }
+        
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+        
+        // Load bookings on page load
+        loadMyBookings();
+    </script>
+</body>
+</html>
