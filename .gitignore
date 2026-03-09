@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment variables
+.env
+backend/.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test files
+backend/test-*.js
+backend/check-*.js
+backend/diagnose-*.js
+backend/fix-*.js
+backend/create-*.js
+backend/setup-*.js
+backend/update-*.js
+backend/ensure-*.js
+backend/approve-*.js
+backend/add-*.js
+backend/verify-*.js
+
+# Documentation (optional - remove if you want to include)
+*.md
+!README.md

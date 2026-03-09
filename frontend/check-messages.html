@@ -101,6 +101,57 @@
             margin-bottom: 10px;
         }
         
+        .client-reply-section {
+            background: #fff9e6;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 5px;
+        }
+        
+        .client-reply-label {
+            font-weight: 600;
+            color: #ff9800;
+            margin-bottom: 10px;
+        }
+        
+        .reply-form {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .reply-form textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        
+        .reply-form button {
+            margin-top: 10px;
+            padding: 8px 20px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .reply-form button:hover {
+            background: #357abd;
+        }
+        
+        .reply-form button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
         .message-date {
             font-size: 0.9rem;
             color: #999;
@@ -222,7 +273,7 @@
             container.innerHTML = `
                 <h3 style="margin-bottom: 20px;">Your Messages (${messages.length})</h3>
                 ${messages.map(msg => `
-                    <div class="message-card">
+                    <div class="message-card" data-message-id="${msg.id}">
                         <div class="message-header">
                             <div class="message-subject">${msg.subject}</div>
                             <div class="message-status status-${msg.status}">${msg.status.toUpperCase()}</div>
@@ -239,6 +290,20 @@
                                 <div class="message-text">${msg.admin_reply}</div>
                                 <div class="message-date">Replied: ${new Date(msg.replied_at).toLocaleString()}</div>
                             </div>
+                            
+                            ${msg.client_reply ? `
+                                <div class="client-reply-section">
+                                    <div class="client-reply-label">💬 Your Reply:</div>
+                                    <div class="message-text">${msg.client_reply}</div>
+                                    <div class="message-date">Sent: ${new Date(msg.client_replied_at).toLocaleString()}</div>
+                                </div>
+                            ` : `
+                                <div class="reply-form">
+                                    <div style="font-weight: 600; margin-bottom: 10px;">Reply to Admin:</div>
+                                    <textarea id="reply-${msg.id}" placeholder="Type your reply here..."></textarea>
+                                    <button onclick="sendClientReply(${msg.id}, '${email}')">Send Reply</button>
+                                </div>
+                            `}
                         ` : `
                             <div style="padding: 10px; background: #fff3cd; border-radius: 5px; margin-top: 15px;">
                                 <strong>⏳ Pending Reply</strong>
@@ -252,6 +317,47 @@
             `;
             
             container.style.display = 'block';
+        }
+        
+        async function sendClientReply(messageId, email) {
+            const textarea = document.getElementById(`reply-${messageId}`);
+            const reply = textarea.value.trim();
+            
+            if (!reply) {
+                alert('Please enter a reply message');
+                return;
+            }
+            
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Sending...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/contact/${messageId}/client-reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reply, email })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to send reply');
+                }
+                
+                alert('Reply sent successfully!');
+                
+                // Reload messages to show the new reply
+                const messagesResponse = await fetch(`${API_BASE}/contact/email/${encodeURIComponent(email)}`);
+                const messages = await messagesResponse.json();
+                displayMessages(messages, email);
+                
+            } catch (error) {
+                alert('Error sending reply. Please try again.');
+                console.error('Error:', error);
+                button.disabled = false;
+                button.textContent = 'Send Reply';
+            }
         }
     </script>
 </body>

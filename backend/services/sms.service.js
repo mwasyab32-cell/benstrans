@@ -1,6 +1,8 @@
 // SMS Service for sending booking notifications
 // Integrated with Africa's Talking SMS Gateway
 
+const { createConnection } = require('../config/db');
+
 const sendSMS = async (phoneNumber, message) => {
     try {
         console.log('\n========================================');
@@ -64,6 +66,35 @@ const sendSMS = async (phoneNumber, message) => {
                 result.SMSMessageData.Recipients.forEach((recipient, index) => {
                     console.log(`  Recipient ${index + 1}:`, JSON.stringify(recipient, null, 2));
                 });
+            }
+            
+            // Save to database
+            try {
+                const connection = await createConnection();
+                
+                // Extract message ID and cost from first recipient
+                let messageId = null;
+                let cost = null;
+                let status = 'sent';
+                
+                if (result.SMSMessageData && result.SMSMessageData.Recipients && result.SMSMessageData.Recipients.length > 0) {
+                    const recipient = result.SMSMessageData.Recipients[0];
+                    messageId = recipient.messageId;
+                    cost = recipient.cost;
+                    status = recipient.status === 'Success' ? 'sent' : 'failed';
+                }
+                
+                await connection.execute(
+                    `INSERT INTO sms_logs (phone_number, message, message_id, status, cost) 
+                     VALUES (?, ?, ?, ?, ?)`,
+                    [formattedPhone, message, messageId, status, cost]
+                );
+                
+                await connection.end();
+                console.log('📝 SMS logged to database');
+            } catch (dbError) {
+                console.error('⚠️  Failed to log SMS to database:', dbError.message);
+                // Don't fail the SMS send if logging fails
             }
             
             return {

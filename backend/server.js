@@ -10,6 +10,7 @@ const adminRoutes = require('./routes/admin.routes');
 const contactRoutes = require('./routes/contact.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const messageRoutes = require('./routes/message.routes');
+const smsRoutes = require('./routes/sms.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +45,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/sms', smsRoutes);
 
 // Serve frontend
 app.get('/', (req, res) => {

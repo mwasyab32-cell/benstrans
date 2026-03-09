@@ -139,7 +139,7 @@ const getMessagesByEmail = async (req, res) => {
         const connection = await createConnection();
         
         const [contacts] = await connection.execute(
-            'SELECT id, name, email, subject, message, admin_reply, status, created_at, replied_at FROM contacts WHERE email = ? ORDER BY created_at DESC',
+            'SELECT id, name, email, subject, message, admin_reply, client_reply, status, created_at, replied_at, client_replied_at FROM contacts WHERE email = ? ORDER BY created_at DESC',
             [email]
         );
         
@@ -151,4 +151,48 @@ const getMessagesByEmail = async (req, res) => {
     }
 };
 
-module.exports = { submitContact, getContacts, getContactById, replyToContact, updateContactStatus, getMessagesByEmail };
+// Client reply to admin message (public endpoint)
+const clientReplyToMessage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reply, email } = req.body;
+        
+        if (!reply || reply.trim() === '') {
+            return res.status(400).json({ error: 'Reply message is required' });
+        }
+        
+        if (!email || email.trim() === '') {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+        
+        const connection = await createConnection();
+        
+        // Verify the contact exists and belongs to this email
+        const [contacts] = await connection.execute(
+            'SELECT * FROM contacts WHERE id = ? AND email = ?',
+            [id, email]
+        );
+        
+        if (contacts.length === 0) {
+            await connection.end();
+            return res.status(404).json({ error: 'Contact message not found or email mismatch' });
+        }
+        
+        // Update with client reply
+        await connection.execute(
+            'UPDATE contacts SET client_reply = ?, client_replied_at = NOW() WHERE id = ?',
+            [reply, id]
+        );
+        
+        await connection.end();
+        
+        res.json({ 
+            message: 'Reply sent successfully',
+            contactId: id
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+module.exports = { submitContact, getContacts, getContactById, replyToContact, updateContactStatus, getMessagesByEmail, clientReplyToMessage };

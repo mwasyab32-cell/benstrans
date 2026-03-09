@@ -343,6 +343,17 @@
                             </div>
                         </div>
                     ` : ''}
+                    
+                    ${client.client_reply ? `
+                        <!-- Client Reply -->
+                        <div class="message customer">
+                            <div class="message-bubble">
+                                <div class="message-subject">💬 Client Reply:</div>
+                                <div>${client.client_reply}</div>
+                            </div>
+                            <div class="message-time">${new Date(client.client_replied_at).toLocaleString()}</div>
+                        </div>
+                    ` : ''}
                 </div>
                 
                 ${!client.admin_reply ? `
