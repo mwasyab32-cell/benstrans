@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Your production URL - UPDATE THIS!
-const PRODUCTION_URL = 'https://your-domain.com'; // e.g., https://benstrans-booking.onrender.com
+const PRODUCTION_URL = 'https://benstrans.onrender.com'; // Your actual Render URL
 
 const LOCAL_API = 'http://localhost:3000/api';
 const PRODUCTION_API = `${PRODUCTION_URL}/api`;

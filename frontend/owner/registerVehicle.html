@@ -188,7 +188,7 @@
             } catch (error) {
                 console.error('Registration error:', error);
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    showMessage('Connection error: Please ensure the server is running on http://localhost:3000', 'error');
+                    showMessage('Connection error: Please ensure the server is running on https://benstrans.onrender.com', 'error');
                 } else {
                     showMessage('Registration failed: ' + error.message, 'error');
                 }

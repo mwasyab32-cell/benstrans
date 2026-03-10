@@ -1,5 +1,5 @@
 // Vehicle related functions
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'https://benstrans.onrender.com/api';
 
 // Register a new vehicle
 async function registerVehicle(vehicleData) {

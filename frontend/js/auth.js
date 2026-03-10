@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'https://benstrans.onrender.com/api';
 
 // Login Form Handler
 if (document.getElementById('loginForm')) {
