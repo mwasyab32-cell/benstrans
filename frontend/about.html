@@ -225,24 +225,27 @@
     <script src="js/navigation.js"></script>
     <script>
         // Newsletter subscription
-        document.querySelector('.newsletter-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            const emailInput = document.querySelector('.newsletter-input');
-            const email = emailInput.value.trim();
-            
-            if (!email) {
-                alert('Please enter your email address');
-                return;
-            }
-            
-            if (!isValidEmail(email)) {
-                alert('Please enter a valid email address');
-                return;
-            }
-            
-            alert('Thank you for subscribing! You will receive updates about our latest routes and offers.');
-            emailInput.value = '';
-        });
+        const newsletterBtn = document.querySelector('.newsletter-btn');
+        if (newsletterBtn) {
+            newsletterBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const emailInput = document.querySelector('.newsletter-input');
+                const email = emailInput.value.trim();
+                
+                if (!email) {
+                    alert('Please enter your email address');
+                    return;
+                }
+                
+                if (!isValidEmail(email)) {
+                    alert('Please enter a valid email address');
+                    return;
+                }
+                
+                alert('Thank you for subscribing! You will receive updates about our latest routes and offers.');
+                emailInput.value = '';
+            });
+        }
         
         function isValidEmail(email) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
