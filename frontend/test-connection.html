@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connection Test - Bens Trans</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Bens Trans Connection Test</h1>
+    
+    <div class="test-card">
+        <h2>Current Configuration</h2>
+        <div id="config"></div>
+    </div>
+    
+    <div class="test-card">
+        <h2>API Tests</h2>
+        <button onclick="testAPI()">Test API Connection</button>
+        <button onclick="testVehicles()">Test Vehicles Endpoint</button>
+        <button onclick="testSearch()">Test Search</button>
+        <div id="results"></div>
+    </div>
+    
+    <div class="test-card">
+        <h2>Browser Information</h2>
+        <div id="browserInfo"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://benstrans.onrender.com/api';
+        
+        // Display configuration
+        document.getElementById('config').innerHTML = `
+            <div class="status info">
+                <strong>API Base URL:</strong> ${API_BASE}<br>
+                <strong>Current Page:</strong> ${window.location.href}<br>
+                <strong>Protocol:</strong> ${window.location.protocol}
+            </div>
+        `;
+        
+        // Display browser info
+        document.getElementById('browserInfo').innerHTML = `
+            <pre>
+User Agent: ${navigator.userAgent}
+Platform: ${navigator.platform}
+Language: ${navigator.language}
+Online: ${navigator.onLine}
+Cookies Enabled: ${navigator.cookieEnabled}
+            </pre>
+        `;
+        
+        async function testAPI() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="status info">Testing API connection...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/vehicles`);
+                const data = await response.json();
+                
+                results.innerHTML = `
+                    <div class="status success">
+                        ✅ API Connection Successful!<br>
+                        Status: ${response.status}<br>
+                        Vehicles found: ${data.length}
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="status error">
+                        ❌ API Connection Failed!<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function testVehicles() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="status info">Testing vehicles endpoint...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/vehicles`);
+                const data = await response.json();
+                
+                results.innerHTML = `
+                    <div class="status success">
+                        ✅ Vehicles Endpoint Working!<br>
+                        Total vehicles: ${data.length}
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="status error">
+                        ❌ Vehicles Endpoint Failed!<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function testSearch() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="status info">Testing search endpoint...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/vehicles/trips/search?from=Bungoma&to=Mombasa&date=2026-03-15`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    results.innerHTML = `
+                        <div class="status success">
+                            ✅ Search Endpoint Working!<br>
+                            Trips found: ${data.length}
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    results.innerHTML = `
+                        <div class="status error">
+                            ❌ Search Failed!<br>
+                            Status: ${response.status}<br>
+                            Error: ${JSON.stringify(data, null, 2)}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="status error">
+                        ❌ Search Endpoint Failed!<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto-run tests on load
+        window.onload = () => {
+            console.log('API Base:', API_BASE);
+            console.log('Running auto-tests...');
+            testAPI();
+        };
+    </script>
+</body>
+</html>
