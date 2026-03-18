@@ -190,7 +190,7 @@ const getMyTrips = async (req, res) => {
                    (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
             FROM trips t
             JOIN vehicles v ON t.vehicle_id = v.id
-            LEFT JOIN bookings b ON t.id = b.trip_id
+            LEFT JOIN booking b ON t.id = b.trip_id
             WHERE v.owner_id = ?
             GROUP BY t.id
             ORDER BY t.travel_date DESC, t.departure_time DESC
@@ -206,41 +206,43 @@ const getMyTrips = async (req, res) => {
 const searchTrips = async (req, res) => {
     try {
         const { from, to, date } = req.query;
+
+        if (!from || !to || !date) {
+            return res.status(400).json({ error: 'from, to and date are required' });
+        }
+
         const connection = await createConnection();
-        
-        // First, try to find existing trips with exact route match
+
+        // Search with case-insensitive partial match
         let [trips] = await connection.execute(`
             SELECT t.*, v.vehicle_number, v.route_from, v.route_to, v.price, v.total_seats,
                    (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
             FROM trips t
             JOIN vehicles v ON t.vehicle_id = v.id
-            LEFT JOIN bookings b ON t.id = b.trip_id
-            WHERE v.route_from = ? AND v.route_to = ? AND t.travel_date = ? AND v.status = 'approved'
+            LEFT JOIN booking b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
+            WHERE LOWER(v.route_from) = LOWER(?) 
+              AND LOWER(v.route_to) = LOWER(?) 
+              AND t.travel_date = ? 
+              AND v.status = 'approved'
             GROUP BY t.id
             HAVING remaining_seats > 0
         `, [from, to, date]);
-        
-        // If no trips found for the exact date, auto-generate trips for approved vehicles
+
+        // If no trips, auto-generate from approved vehicles on this route
         if (trips.length === 0) {
-            console.log('No existing trips found, generating trips for approved vehicles...');
-            
-            // Get all approved vehicles for this route
             const [vehicles] = await connection.execute(`
                 SELECT * FROM vehicles 
-                WHERE route_from = ? AND route_to = ? AND status = 'approved'
+                WHERE LOWER(route_from) = LOWER(?) AND LOWER(route_to) = LOWER(?) AND status = 'approved'
             `, [from, to]);
-            
-            // Generate trips for each vehicle (default departure times)
+
             const defaultTimes = ['06:00:00', '08:00:00', '10:00:00', '12:00:00', '14:00:00', '16:00:00', '18:00:00'];
-            
+
             for (const vehicle of vehicles) {
                 for (const time of defaultTimes) {
-                    // Check if trip already exists
                     const [existing] = await connection.execute(
                         'SELECT id FROM trips WHERE vehicle_id = ? AND travel_date = ? AND departure_time = ?',
                         [vehicle.id, date, time]
                     );
-                    
                     if (existing.length === 0) {
                         await connection.execute(
                             'INSERT INTO trips (vehicle_id, travel_date, departure_time, available_seats) VALUES (?, ?, ?, ?)',
@@ -249,37 +251,24 @@ const searchTrips = async (req, res) => {
                     }
                 }
             }
-            
-            // Now search again for the newly created trips
+
             [trips] = await connection.execute(`
                 SELECT t.*, v.vehicle_number, v.route_from, v.route_to, v.price, v.total_seats,
                        (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
                 FROM trips t
                 JOIN vehicles v ON t.vehicle_id = v.id
-                LEFT JOIN bookings b ON t.id = b.trip_id
-                WHERE v.route_from = ? AND v.route_to = ? AND t.travel_date = ? AND v.status = 'approved'
+                LEFT JOIN booking b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
+                WHERE LOWER(v.route_from) = LOWER(?) 
+                  AND LOWER(v.route_to) = LOWER(?) 
+                  AND t.travel_date = ? 
+                  AND v.status = 'approved'
                 GROUP BY t.id
                 HAVING remaining_seats > 0
             `, [from, to, date]);
         }
-        
-        // If still no trips found, show all approved vehicles for this route (even without specific trips)
-        if (trips.length === 0) {
-            console.log('Still no trips found, showing all approved vehicles for this route...');
-            
-            const [vehicles] = await connection.execute(`
-                SELECT v.*, v.total_seats as remaining_seats, 
-                       '08:00:00' as departure_time, ? as travel_date,
-                       NULL as id, NULL as available_seats
-                FROM vehicles v
-                WHERE v.route_from = ? AND v.route_to = ? AND v.status = 'approved'
-            `, [date, from, to]);
-            
-            trips = vehicles;
-        }
-        
+
         await connection.end();
-        console.log(`Found ${trips.length} available trips/vehicles for ${from} to ${to} on ${date}`);
+        console.log(`Found ${trips.length} trips for ${from} → ${to} on ${date}`);
         res.json(trips);
     } catch (error) {
         console.error('Search trips error:', error);
@@ -300,7 +289,7 @@ const searchTripsFlexible = async (req, res) => {
                    DATEDIFF(t.travel_date, ?) as date_diff
             FROM trips t
             JOIN vehicles v ON t.vehicle_id = v.id
-            LEFT JOIN bookings b ON t.id = b.trip_id
+            LEFT JOIN booking b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
             WHERE (v.route_from LIKE ? OR v.route_from = ?) 
               AND (v.route_to LIKE ? OR v.route_to = ?)
               AND v.status = 'approved'
