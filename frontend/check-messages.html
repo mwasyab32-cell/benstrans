@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Messages - Bens Trans</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/navigation.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        .check-messages-container {
+            max-width: 800px;
+            margin: 100px auto;
+            padding: 20px;
+        }
+        
+        .check-form {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .messages-list {
+            display: none;
+        }
+        
+        .message-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #4a90e2;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .message-subject {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .message-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .status-new {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status-read {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-responded {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .message-content {
+            margin: 15px 0;
+        }
+        
+        .message-label {
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .message-text {
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+        
+        .admin-reply {
+            background: #f8f9ff;
+            border-left: 4px solid #51cf66;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 5px;
+        }
+        
+        .reply-label {
+            font-weight: 600;
+            color: #51cf66;
+            margin-bottom: 10px;
+        }
+        
+        .client-reply-section {
+            background: #fff9e6;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 5px;
+        }
+        
+        .client-reply-label {
+            font-weight: 600;
+            color: #ff9800;
+            margin-bottom: 10px;
+        }
+        
+        .reply-form {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .reply-form textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        
+        .reply-form button {
+            margin-top: 10px;
+            padding: 8px 20px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .reply-form button:hover {
+            background: #357abd;
+        }
+        
+        .reply-form button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .message-date {
+            font-size: 0.9rem;
+            color: #999;
+            margin-top: 10px;
+        }
+        
+        .no-messages {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html">
+                <div class="nav-logo">
+                    <img src="logo.jpeg" alt="Bens Trans Logo" style="height: 40px; margin-right: 10px; vertical-align: middle; border-radius: 5px;">
+                    <h2 style="display: inline-block; vertical-align: middle;">Bens Trans</h2>
+                </div>
+            </a>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="contact.html" class="nav-link">Contact</a>
+                </li>
+                <li class="nav-item">
+                    <a href="login.html" class="nav-link login-btn">Login</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="check-messages-container">
+        <div class="check-form">
+            <h2 style="text-align: center; margin-bottom: 20px;">Check Your Messages</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 30px;">
+                Enter your email to view replies from our support team
+            </p>
+            
+            <form id="checkForm">
+                <div class="form-group">
+                    <label for="email">Email Address:</label>
+                    <input type="email" id="email" required placeholder="Enter the email you used to contact us">
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Check Messages</button>
+            </form>
+        </div>
+
+        <div id="messagesList" class="messages-list"></div>
+    </div>
+
+    <script src="js/navigation.js"></script>
+    <script>
+        const API_BASE = 'https://benstrans.onrender.com/api';
+
+        // Auto-fill email from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const emailParam = urlParams.get('email');
+        if (emailParam) {
+            document.getElementById('email').value = emailParam;
+            // Auto-submit if email is provided
+            setTimeout(() => {
+                document.getElementById('checkForm').dispatchEvent(new Event('submit'));
+            }, 500);
+        }
+
+        document.getElementById('checkForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.textContent;
+            
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/contact/email/${encodeURIComponent(email)}`);
+                const messages = await response.json();
+                
+                displayMessages(messages, email);
+            } catch (error) {
+                alert('Error loading messages. Please try again.');
+                console.error('Error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+
+        function displayMessages(messages, email) {
+            const container = document.getElementById('messagesList');
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="no-messages">
+                        <h3>No messages found</h3>
+                        <p>We couldn't find any messages for ${email}</p>
+                        <p style="margin-top: 20px;">
+                            <a href="contact.html" class="btn">Send a Message</a>
+                        </p>
+                    </div>
+                `;
+                container.style.display = 'block';
+                return;
+            }
+            
+            container.innerHTML = `
+                <h3 style="margin-bottom: 20px;">Your Messages (${messages.length})</h3>
+                ${messages.map(msg => `
+                    <div class="message-card" data-message-id="${msg.id}">
+                        <div class="message-header">
+                            <div class="message-subject">${msg.subject}</div>
+                            <div class="message-status status-${msg.status}">${msg.status.toUpperCase()}</div>
+                        </div>
+                        
+                        <div class="message-content">
+                            <div class="message-label">Your Message:</div>
+                            <div class="message-text">${msg.message}</div>
+                        </div>
+                        
+                        ${msg.admin_reply ? `
+                            <div class="admin-reply">
+                                <div class="reply-label">✓ Admin Reply:</div>
+                                <div class="message-text">${msg.admin_reply}</div>
+                                <div class="message-date">Replied: ${new Date(msg.replied_at).toLocaleString()}</div>
+                            </div>
+                            
+                            ${msg.client_reply ? `
+                                <div class="client-reply-section">
+                                    <div class="client-reply-label">💬 Your Reply:</div>
+                                    <div class="message-text">${msg.client_reply}</div>
+                                    <div class="message-date">Sent: ${new Date(msg.client_replied_at).toLocaleString()}</div>
+                                </div>
+                            ` : `
+                                <div class="reply-form">
+                                    <div style="font-weight: 600; margin-bottom: 10px;">Reply to Admin:</div>
+                                    <textarea id="reply-${msg.id}" placeholder="Type your reply here..."></textarea>
+                                    <button onclick="sendClientReply(${msg.id}, '${email}')">Send Reply</button>
+                                </div>
+                            `}
+                        ` : `
+                            <div style="padding: 10px; background: #fff3cd; border-radius: 5px; margin-top: 15px;">
+                                <strong>⏳ Pending Reply</strong>
+                                <p style="margin: 5px 0 0 0; font-size: 0.9rem;">Our team will respond to your message soon.</p>
+                            </div>
+                        `}
+                        
+                        <div class="message-date">Sent: ${new Date(msg.created_at).toLocaleString()}</div>
+                    </div>
+                `).join('')}
+            `;
+            
+            container.style.display = 'block';
+        }
+        
+        async function sendClientReply(messageId, email) {
+            const textarea = document.getElementById(`reply-${messageId}`);
+            const reply = textarea.value.trim();
+            
+            if (!reply) {
+                alert('Please enter a reply message');
+                return;
+            }
+            
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Sending...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/contact/${messageId}/client-reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reply, email })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to send reply');
+                }
+                
+                alert('Reply sent successfully!');
+                
+                // Reload messages to show the new reply
+                const messagesResponse = await fetch(`${API_BASE}/contact/email/${encodeURIComponent(email)}`);
+                const messages = await messagesResponse.json();
+                displayMessages(messages, email);
+                
+            } catch (error) {
+                alert('Error sending reply. Please try again.');
+                console.error('Error:', error);
+                button.disabled = false;
+                button.textContent = 'Send Reply';
+            }
+        }
+    </script>
+</body>
+</html>

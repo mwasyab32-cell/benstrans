@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Bookings - Bens Trans</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/theme.css">
+    <style>
+        .dashboard-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            color: white;
+            padding: 30px 20px;
+            margin-bottom: 30px;
+        }
+        
+        .dashboard-header h1 {
+            margin: 0 0 10px 0;
+        }
+        
+        .dashboard-header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        
+        .booking-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #4a90e2;
+        }
+        
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .booking-ref {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .booking-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .booking-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .detail-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .detail-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .booking-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+        
+        .no-bookings {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .no-bookings h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <div class="container">
+            <h1>My Bookings</h1>
+            <p id="welcomeMessage">Welcome back!</p>
+            <button class="btn" onclick="logout()" style="margin-top: 15px; background: rgba(255,255,255,0.2);">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="bookingsContainer">
+            <div style="text-align: center; padding: 40px;">
+                <p>Loading your bookings...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/auth.js"></script>
+    <script>
+        // Check if user is logged in as client
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!user.id || user.role !== 'client') {
+            alert('Please log in to view your bookings');
+            window.location.href = '../login.html';
+        }
+
+        document.getElementById('welcomeMessage').textContent = `Welcome back, ${user.name}!`;
+
+        // Load bookings
+        async function loadBookings() {
+            try {
+                const response = await fetch(`${API_BASE}/bookings/my-bookings`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load bookings');
+                }
+
+                const bookings = await response.json();
+                displayBookings(bookings);
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+                document.getElementById('bookingsContainer').innerHTML = `
+                    <div class="no-bookings">
+                        <h3>Unable to load bookings</h3>
+                        <p>Please try again later</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayBookings(bookings) {
+            const container = document.getElementById('bookingsContainer');
+
+            if (bookings.length === 0) {
+                container.innerHTML = `
+                    <div class="no-bookings">
+                        <h3>No bookings yet</h3>
+                        <p>Start your journey by booking a trip!</p>
+                        <a href="../book-now.html" class="btn" style="margin-top: 20px;">Book Now</a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = bookings.map(booking => `
+                <div class="booking-card">
+                    <div class="booking-header">
+                        <div class="booking-ref">Ref: ${booking.reference_number || 'N/A'}</div>
+                        <div class="booking-status status-${booking.payment_status}">
+                            ${booking.payment_status === 'paid' ? '✓ Paid' : '⏳ Pending Payment'}
+                        </div>
+                    </div>
+
+                    <div class="booking-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Route</span>
+                            <span class="detail-value">${booking.route_from} → ${booking.route_to}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Travel Date</span>
+                            <span class="detail-value">${new Date(booking.travel_date).toLocaleDateString()}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Departure Time</span>
+                            <span class="detail-value">${booking.departure_time}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Vehicle</span>
+                            <span class="detail-value">${booking.vehicle_number}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Seats</span>
+                            <span class="detail-value">${booking.seats_booked} seat(s)</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Total Amount</span>
+                            <span class="detail-value">KSh ${booking.total_amount}</span>
+                        </div>
+                        ${booking.mpesa_receipt_number ? `
+                        <div class="detail-item">
+                            <span class="detail-label">M-Pesa Receipt</span>
+                            <span class="detail-value">${booking.mpesa_receipt_number}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="booking-actions">
+                        ${booking.reference_number ? `
+                            <a href="../receipt.html?ref=${booking.reference_number}" class="btn btn-small" target="_blank">
+                                View Receipt
+                            </a>
+                        ` : ''}
+                        ${booking.payment_status === 'pending' ? `
+                            <button class="btn btn-small" style="background: #51cf66;" onclick="payNow(${booking.id})">
+                                Pay Now
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function payNow(bookingId) {
+            const phoneNumber = prompt('Enter your M-Pesa phone number (e.g., 0712345678):');
+            
+            if (!phoneNumber) {
+                return;
+            }
+            
+            // Validate phone number
+            if (!/^0[17]\d{8}$/.test(phoneNumber)) {
+                alert('Invalid phone number. Please enter a valid Kenyan number (e.g., 0712345678)');
+                return;
+            }
+            
+            // Show loading
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            
+            // Initiate payment
+            fetch(`${API_BASE}/payments/initiate`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    booking_id: bookingId,
+                    phone_number: phoneNumber
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Payment request sent!\n\nCheck your phone for the M-Pesa prompt.\nEnter your PIN to complete payment.');
+                    
+                    // Reload bookings after a delay
+                    setTimeout(() => {
+                        loadBookings();
+                    }, 3000);
+                } else {
+                    alert('❌ Payment failed: ' + (data.error || 'Unknown error'));
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('Payment error:', error);
+                alert('❌ Payment failed. Please try again.');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '../login.html';
+        }
+
+        // Load bookings on page load
+        loadBookings();
+    </script>
+</body>
+</html>

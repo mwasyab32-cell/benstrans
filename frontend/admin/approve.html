@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Bens Trans</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="nav">
+                <div class="logo">Bens Trans Admin</div>
+                <div class="nav-links">
+                    <span id="adminName"></span>
+                    <button class="btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Pending Owner Approvals</h2>
+            <div id="pendingOwners"></div>
+        </div>
+        
+        <div class="card">
+            <h2>Pending Vehicle Approvals</h2>
+            <div id="pendingVehicles"></div>
+        </div>
+        
+        <div id="message"></div>
+    </div>
+    
+    <script src="../js/auth.js"></script>
+    <script>
+        const API_BASE = 'https://benstrans.onrender.com/api';
+        
+        // Check if user is admin
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.role !== 'admin') {
+            window.location.href = '../login.html';
+        }
+        
+        document.getElementById('adminName').textContent = user.name;
+        
+        // Load pending owners
+        async function loadPendingOwners() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/pending-owners`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const owners = await response.json();
+                
+                let html = '<table class="table"><tr><th>Name</th><th>Email</th><th>Phone</th><th>Action</th></tr>';
+                owners.forEach(owner => {
+                    html += `
+                        <tr>
+                            <td>${owner.name}</td>
+                            <td>${owner.email}</td>
+                            <td>${owner.phone}</td>
+                            <td><button class="btn btn-success" onclick="approveUser(${owner.id})">Approve</button></td>
+                        </tr>
+                    `;
+                });
+                html += '</table>';
+                
+                document.getElementById('pendingOwners').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading pending owners:', error);
+            }
+        }
+        
+        // Load pending vehicles
+        async function loadPendingVehicles() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/pending-vehicles`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const vehicles = await response.json();
+                
+                let html = '<table class="table"><tr><th>Vehicle</th><th>Owner</th><th>Route</th><th>Seats</th><th>Price</th><th>Action</th></tr>';
+                vehicles.forEach(vehicle => {
+                    html += `
+                        <tr>
+                            <td>${vehicle.vehicle_number}</td>
+                            <td>${vehicle.owner_name}</td>
+                            <td>${vehicle.route_from} → ${vehicle.route_to}</td>
+                            <td>${vehicle.total_seats}</td>
+                            <td>KSh ${vehicle.price}</td>
+                            <td><button class="btn btn-success" onclick="approveVehicle(${vehicle.id})">Approve</button></td>
+                        </tr>
+                    `;
+                });
+                html += '</table>';
+                
+                document.getElementById('pendingVehicles').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading pending vehicles:', error);
+            }
+        }
+        
+        // Approve user
+        async function approveUser(userId) {
+            try {
+                const response = await fetch(`${API_BASE}/admin/approve-user/${userId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    showMessage('User approved successfully!', 'success');
+                    loadPendingOwners();
+                }
+            } catch (error) {
+                showMessage('Error approving user', 'error');
+            }
+        }
+        
+        // Approve vehicle
+        async function approveVehicle(vehicleId) {
+            try {
+                const response = await fetch(`${API_BASE}/admin/approve-vehicle/${vehicleId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    showMessage('Vehicle approved successfully!', 'success');
+                    loadPendingVehicles();
+                }
+            } catch (error) {
+                showMessage('Error approving vehicle', 'error');
+            }
+        }
+        
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+        
+        // Load data on page load
+        loadPendingOwners();
+        loadPendingVehicles();
+    </script>
+</body>
+</html>

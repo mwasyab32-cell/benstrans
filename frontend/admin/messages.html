@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Messages - Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <style>
+        .messages-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .message-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .message-status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-new { background: #ffc107; color: #000; }
+        .status-read { background: #17a2b8; color: #fff; }
+        .status-responded { background: #28a745; color: #fff; }
+        .reply-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .reply-form {
+            display: none;
+            margin-top: 10px;
+        }
+        .reply-form.active {
+            display: block;
+        }
+        .reply-form textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .admin-reply {
+            background: #f0f8ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-small:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Contact Messages</h1>
+            <button onclick="location.href='dashboard.html'" class="btn">Back to Dashboard</button>
+        </div>
+
+        <div class="messages-container">
+            <div id="messagesList"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://benstrans.onrender.com/api';
+
+        async function loadMessages() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/contact`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load messages');
+                }
+
+                const messages = await response.json();
+                displayMessages(messages);
+            } catch (error) {
+                document.getElementById('messagesList').innerHTML = 
+                    `<div class="alert alert-error">Error loading messages: ${error.message}</div>`;
+            }
+        }
+
+        function displayMessages(messages) {
+            const container = document.getElementById('messagesList');
+            
+            if (messages.length === 0) {
+                container.innerHTML = '<p>No messages yet.</p>';
+                return;
+            }
+
+            container.innerHTML = messages.map(msg => `
+                <div class="message-card" id="message-${msg.id}">
+                    <div class="message-header">
+                        <div>
+                            <strong>${msg.name}</strong> - ${msg.email}
+                            ${msg.phone ? `<br><small>📞 ${msg.phone}</small>` : ''}
+                        </div>
+                        <span class="message-status status-${msg.status}">${msg.status.toUpperCase()}</span>
+                    </div>
+                    <div>
+                        <strong>Subject:</strong> ${msg.subject}<br>
+                        <strong>Message:</strong><br>
+                        <p>${msg.message}</p>
+                        <small>Received: ${new Date(msg.created_at).toLocaleString()}</small>
+                    </div>
+                    
+                    ${msg.admin_reply ? `
+                        <div class="admin-reply">
+                            <strong>✅ Your Reply:</strong><br>
+                            <p>${msg.admin_reply}</p>
+                            <small>Replied: ${new Date(msg.replied_at).toLocaleString()}</small>
+                        </div>
+                    ` : `
+                        <div class="reply-section">
+                            <div class="btn-group">
+                                <button class="btn-small btn-primary" onclick="toggleReplyForm(${msg.id})">
+                                    Reply to Customer
+                                </button>
+                                ${msg.status === 'new' ? `
+                                    <button class="btn-small btn-secondary" onclick="markAsRead(${msg.id})">
+                                        Mark as Read
+                                    </button>
+                                ` : ''}
+                            </div>
+                            
+                            <div class="reply-form" id="reply-form-${msg.id}">
+                                <textarea id="reply-text-${msg.id}" placeholder="Type your reply here..."></textarea>
+                                <div class="btn-group">
+                                    <button class="btn-small btn-success" onclick="sendReply(${msg.id})">
+                                        Send Reply
+                                    </button>
+                                    <button class="btn-small btn-secondary" onclick="toggleReplyForm(${msg.id})">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `}
+                </div>
+            `).join('');
+        }
+
+        function toggleReplyForm(messageId) {
+            const form = document.getElementById(`reply-form-${messageId}`);
+            form.classList.toggle('active');
+        }
+
+        async function sendReply(messageId) {
+            const replyText = document.getElementById(`reply-text-${messageId}`).value.trim();
+            
+            if (!replyText) {
+                alert('Please enter a reply message');
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/contact/${messageId}/reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reply: replyText })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to send reply');
+                }
+
+                alert('✅ Reply sent successfully!');
+                loadMessages(); // Reload messages
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function markAsRead(messageId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/contact/${messageId}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'read' })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update status');
+                }
+
+                loadMessages(); // Reload messages
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Load messages on page load
+        loadMessages();
+    </script>
+</body>
+</html>

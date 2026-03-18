@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Now - Bens Trans</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/navigation.css">
+    <style>
+        .booking-wizard {
+            max-width: 900px;
+            margin: 100px auto 50px;
+            padding: 0 20px;
+        }
+        
+        .wizard-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+        }
+        
+        .wizard-steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+        
+        .wizard-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .wizard-step.active .step-circle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .wizard-step.completed .step-circle {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .step-label {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .wizard-step.active .step-label {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .wizard-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .wizard-panel {
+            display: none;
+        }
+        
+        .wizard-panel.active {
+            display: block;
+        }
+        
+        .vehicle-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .vehicle-item {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .vehicle-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .vehicle-item.selected {
+            border-color: #667eea;
+            border-width: 3px;
+            background: linear-gradient(135deg, #f5f7ff 0%, #e8eaf6 100%);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .vehicle-item.selected::before {
+            content: '✓ Selected';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .summary-total {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 15px;
+        }
+        
+        /* Seat Selection Styles */
+        .seat-legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f5f7ff;
+            border-radius: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .seat-map-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 30px;
+            background: linear-gradient(180deg, #f5f5f5 0%, #ffffff 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .bus-front {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .seat-row {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 15px;
+        }
+        
+        .seat-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .seat {
+            width: 45px;
+            height: 45px;
+            border: 2px solid #ccc;
+            border-radius: 8px 8px 2px 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s;
+            position: relative;
+            background: white;
+        }
+        
+        .seat.available {
+            border-color: #4caf50;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .seat.available:hover {
+            background: #c8e6c9;
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+        }
+        
+        .seat.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .seat.booked {
+            border-color: #999;
+            background: #e0e0e0;
+            color: #666;
+            cursor: not-allowed;
+        }
+        
+        .seat.window::after {
+            content: '🪟';
+            position: absolute;
+            top: -20px;
+            font-size: 16px;
+        }
+        
+        .selected-seats-info {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f5f7ff;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .selected-seats-info p {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        
+        .selected-seats-info strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="logo.jpeg" alt="Bens Trans Logo" style="height: 40px; margin-right: 10px; vertical-align: middle; border-radius: 5px;">
+                <h2 style="display: inline-block; vertical-align: middle;">Bens Trans</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="index.html" class="nav-link">Home</a></li>
+                <li class="nav-item"><a href="services.html" class="nav-link">Services</a></li>
+                <li class="nav-item"><a href="about.html" class="nav-link">About</a></li>
+                <li class="nav-item"><a href="contact.html" class="nav-link">Contact</a></li>
+                <li class="nav-item"><a href="login.html" class="nav-link login-btn">Login</a></li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="booking-wizard">
+        <div class="wizard-steps">
+            <div class="wizard-step active" data-step="1">
+                <div class="step-circle">1</div>
+                <div class="step-label">Search Trip</div>
+            </div>
+            <div class="wizard-step" data-step="2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Select Vehicle</div>
+            </div>
+            <div class="wizard-step" data-step="2.5">
+                <div class="step-circle">3</div>
+                <div class="step-label">Choose Seats</div>
+            </div>
+            <div class="wizard-step" data-step="3">
+                <div class="step-circle">4</div>
+                <div class="step-label">Your Details</div>
+            </div>
+            <div class="wizard-step" data-step="4">
+                <div class="step-circle">5</div>
+                <div class="step-label">Confirm & Pay</div>
+            </div>
+        </div>
+
+        <div class="wizard-content">
+            <!-- Step 1: Search -->
+            <div class="wizard-panel active" id="step1">
+                <h2>Search for Available Trips</h2>
+                <form id="searchForm">
+                    <div class="form-group">
+                        <label for="from">From:</label>
+                        <input type="text" id="from" required placeholder="e.g., Nairobi">
+                    </div>
+                    <div class="form-group">
+                        <label for="to">To:</label>
+                        <input type="text" id="to" required placeholder="e.g., Mombasa">
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Travel Date:</label>
+                        <input type="date" id="date" required>
+                        <small style="color: #666; font-size: 12px;">Bookings must be made at least 24 hours in advance</small>
+                    </div>
+                    <div class="wizard-actions">
+                        <div></div>
+                        <button type="submit" class="btn">Search Vehicles</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 2: Select Vehicle -->
+            <div class="wizard-panel" id="step2">
+                <h2>Select Your Vehicle</h2>
+                <div id="vehicleResults"></div>
+                <div class="wizard-actions">
+                    <button class="btn btn-secondary" onclick="goToStep(1)">Back</button>
+                    <button class="btn" onclick="proceedToSeatSelection()" id="continueToSeats" disabled>Continue to Seat Selection</button>
+                </div>
+            </div>
+
+            <!-- Step 2.5: Select Seats -->
+            <div class="wizard-panel" id="step2_5">
+                <h2>Select Your Seats</h2>
+                <div id="seatSelectionArea">
+                    <div class="seat-legend">
+                        <div class="legend-item"><span class="seat available"></span> Available</div>
+                        <div class="legend-item"><span class="seat selected"></span> Your Selection</div>
+                        <div class="legend-item"><span class="seat booked"></span> Booked</div>
+                    </div>
+                    <div id="seatMap"></div>
+                    <div class="selected-seats-info">
+                        <p><strong>Selected Seats:</strong> <span id="selectedSeatsList">None</span></p>
+                        <p><strong>Total:</strong> <span id="selectedSeatsTotal">KSh 0</span></p>
+                    </div>
+                </div>
+                <div class="wizard-actions">
+                    <button class="btn btn-secondary" onclick="goToStep(2)">Back to Vehicles</button>
+                    <button class="btn" onclick="goToStep(3)" id="continueToDetails2" disabled>Continue with Selected Seats</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Personal Details -->
+            <div class="wizard-panel" id="step3">
+                <h2>Enter Your Details</h2>
+                <p style="text-align: center; color: #667eea; margin-bottom: 20px;">
+                    <strong>Selected Seats:</strong> <span id="selectedSeatsDisplay">None</span>
+                </p>
+                <form id="detailsForm">
+                    <div class="form-group">
+                        <label for="fullName">Full Name:</label>
+                        <input type="text" id="fullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email Address:</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number (M-Pesa):</label>
+                        <input type="tel" id="phone" required placeholder="0712345678" 
+                               pattern="[0-9]{10}" maxlength="10" minlength="10"
+                               title="Phone number must be exactly 10 digits">
+                        <small style="color: #666;">Must be exactly 10 digits (e.g., 0712345678)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="idNumber">ID/Passport Number:</label>
+                        <input type="text" id="idNumber" required 
+                               pattern="[0-9]{8}" maxlength="8" minlength="8"
+                               title="ID number must be exactly 8 digits">
+                        <small style="color: #666;">Must be exactly 8 digits</small>
+                    </div>
+                    <div class="wizard-actions">
+                        <button type="button" class="btn btn-secondary" onclick="goToStep(2.5)">Back to Seats</button>
+                        <button type="submit" class="btn">Continue to Payment</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 4: Confirm & Pay -->
+            <div class="wizard-panel" id="step4">
+                <h2>Booking Summary</h2>
+                <div id="bookingSummary"></div>
+                <div class="wizard-actions">
+                    <button class="btn btn-secondary" onclick="goToStep(3)">Back</button>
+                    <button class="btn btn-success" onclick="confirmBooking()">Confirm & Pay via M-Pesa</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/navigation.js"></script>
+    <script>
+        const API_BASE = 'https://benstrans.onrender.com/api';
+        let bookingData = {
+            trip: null,
+            seats: 1,
+            selectedSeats: [],
+            customer: {}
+        };
+
+        // Set minimum date to tomorrow (24 hours from now)
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('date').min = tomorrow.toISOString().split('T')[0];
+
+        // Auto-fill search form from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const fromParam = urlParams.get('from');
+        const toParam = urlParams.get('to');
+        const dateParam = urlParams.get('date');
+        
+        if (fromParam) document.getElementById('from').value = fromParam;
+        if (toParam) document.getElementById('to').value = toParam;
+        if (dateParam) document.getElementById('date').value = dateParam;
+        
+        // Auto-submit if all parameters are present
+        if (fromParam && toParam && dateParam) {
+            setTimeout(() => {
+                document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+            }, 500);
+        }
+
+        // Step 1: Search form
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const from = document.getElementById('from').value;
+            const to = document.getElementById('to').value;
+            const date = document.getElementById('date').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/vehicles/trips/search?from=${from}&to=${to}&date=${date}`);
+                const trips = await response.json();
+                
+                if (trips.length === 0) {
+                    alert('No vehicles found for this route and date. Please try different search criteria.');
+                    return;
+                }
+                
+                displayVehicles(trips);
+                goToStep(2);
+            } catch (error) {
+                alert('Search failed. Please try again.');
+            }
+        });
+
+        function displayVehicles(trips) {
+            const resultsDiv = document.getElementById('vehicleResults');
+            let html = '<div class="vehicle-grid">';
+            
+            trips.forEach(trip => {
+                html += `
+                    <div class="vehicle-item" onclick="selectVehicle(${trip.id}, this)" data-trip='${JSON.stringify(trip).replace(/'/g, "&apos;")}'>
+                        <h3 style="margin-top: 0;">${trip.vehicle_number}</h3>
+                        <p><strong>Route:</strong> ${trip.route_from} → ${trip.route_to}</p>
+                        <p><strong>Date:</strong> ${new Date(trip.travel_date).toLocaleDateString()}</p>
+                        <p><strong>Departure:</strong> ${trip.departure_time}</p>
+                        <p><strong>Available Seats:</strong> ${trip.remaining_seats}</p>
+                        <p class="price" style="font-size: 24px; color: #667eea; font-weight: bold; margin-top: 10px;">
+                            KSh ${trip.price}
+                        </p>
+                        <button type="button" class="btn" style="width: 100%; margin-top: 10px;" onclick="event.stopPropagation(); selectVehicle(${trip.id}, this.parentElement)">
+                            Select This Vehicle
+                        </button>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            if (trips.length === 0) {
+                html = '<p style="text-align: center; padding: 40px; color: #666;">No vehicles found for this route and date.</p>';
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        function selectVehicle(tripId, element) {
+            // Remove previous selection
+            document.querySelectorAll('.vehicle-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Select this vehicle
+            element.classList.add('selected');
+            bookingData.trip = JSON.parse(element.dataset.trip);
+            bookingData.selectedSeats = []; // Reset seat selection
+            
+            console.log('Vehicle selected:', bookingData.trip);
+            
+            // Enable continue button
+            const continueBtn = document.getElementById('continueToSeats');
+            continueBtn.disabled = false;
+            continueBtn.textContent = `Continue with ${bookingData.trip.vehicle_number}`;
+            
+            // Auto-advance to seat selection after a short delay
+            setTimeout(() => {
+                proceedToSeatSelection();
+            }, 800);
+        }
+        
+        async function proceedToSeatSelection() {
+            if (!bookingData.trip) {
+                alert('Please select a vehicle first');
+                return;
+            }
+            
+            // Load booked seats for this trip
+            try {
+                const response = await fetch(`${API_BASE}/vehicles/trips/${bookingData.trip.id}/seats`);
+                const data = await response.json();
+                const bookedSeats = data.booked_seats || [];
+                
+                displaySeatMap(bookingData.trip.available_seats, bookedSeats);
+                goToStep(2.5);
+            } catch (error) {
+                console.error('Error loading seat data:', error);
+                // If API fails, show all seats as available
+                displaySeatMap(bookingData.trip.available_seats, []);
+                goToStep(2.5);
+            }
+        }
+        
+        function displaySeatMap(totalSeats, bookedSeats) {
+            const seatMapDiv = document.getElementById('seatMap');
+            
+            // Determine layout based on vehicle type
+            const seatsPerRow = bookingData.trip.vehicle_type === 'bus' ? 4 : 4; // 2+2 layout
+            const rows = Math.ceil(totalSeats / seatsPerRow);
+            
+            let html = '<div class="seat-map-container">';
+            html += '<div class="bus-front">🚌 FRONT (Driver)</div>';
+            
+            let seatNumber = 1;
+            for (let row = 0; row < rows; row++) {
+                html += '<div class="seat-row">';
+                
+                // Left side (2 seats)
+                html += '<div class="seat-group">';
+                for (let i = 0; i < 2 && seatNumber <= totalSeats; i++) {
+                    const isBooked = bookedSeats.includes(seatNumber);
+                    const isWindow = i === 0;
+                    const seatClass = isBooked ? 'booked' : 'available';
+                    const windowClass = isWindow ? 'window' : '';
+                    
+                    html += `
+                        <div class="seat ${seatClass} ${windowClass}" 
+                             data-seat="${seatNumber}" 
+                             onclick="toggleSeat(${seatNumber}, this)"
+                             ${isBooked ? 'style="pointer-events: none;"' : ''}>
+                            ${seatNumber}
+                        </div>
+                    `;
+                    seatNumber++;
+                }
+                html += '</div>';
+                
+                // Aisle space
+                
+                // Right side (2 seats)
+                html += '<div class="seat-group">';
+                for (let i = 0; i < 2 && seatNumber <= totalSeats; i++) {
+                    const isBooked = bookedSeats.includes(seatNumber);
+                    const isWindow = i === 1;
+                    const seatClass = isBooked ? 'booked' : 'available';
+                    const windowClass = isWindow ? 'window' : '';
+                    
+                    html += `
+                        <div class="seat ${seatClass} ${windowClass}" 
+                             data-seat="${seatNumber}" 
+                             onclick="toggleSeat(${seatNumber}, this)"
+                             ${isBooked ? 'style="pointer-events: none;"' : ''}>
+                            ${seatNumber}
+                        </div>
+                    `;
+                    seatNumber++;
+                }
+                html += '</div>';
+                
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            seatMapDiv.innerHTML = html;
+            
+            updateSelectedSeatsDisplay();
+        }
+        
+        function toggleSeat(seatNumber, element) {
+            if (element.classList.contains('booked')) {
+                return;
+            }
+            
+            const seatIndex = bookingData.selectedSeats.indexOf(seatNumber);
+            
+            if (seatIndex > -1) {
+                // Deselect
+                bookingData.selectedSeats.splice(seatIndex, 1);
+                element.classList.remove('selected');
+                element.classList.add('available');
+            } else {
+                // Select
+                bookingData.selectedSeats.push(seatNumber);
+                element.classList.remove('available');
+                element.classList.add('selected');
+            }
+            
+            bookingData.selectedSeats.sort((a, b) => a - b);
+            updateSelectedSeatsDisplay();
+        }
+        
+        function updateSelectedSeatsDisplay() {
+            const count = bookingData.selectedSeats.length;
+            const total = count * bookingData.trip.price;
+            
+            document.getElementById('selectedSeatsList').textContent = 
+                count > 0 ? bookingData.selectedSeats.join(', ') : 'None';
+            document.getElementById('selectedSeatsTotal').textContent = `KSh ${total}`;
+            
+            const continueBtn = document.getElementById('continueToDetails2');
+            continueBtn.disabled = count === 0;
+            continueBtn.textContent = count > 0 
+                ? `Continue with ${count} seat${count > 1 ? 's' : ''}` 
+                : 'Select at least one seat';
+            
+            bookingData.seats = count;
+        }
+
+        // Add input validation for phone and ID number
+        document.getElementById('phone').addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+        });
+        
+        document.getElementById('idNumber').addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
+        });
+
+        // Step 3: Details form
+        document.getElementById('detailsForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            if (bookingData.selectedSeats.length === 0) {
+                alert('Please select at least one seat');
+                goToStep(2.5);
+                return;
+            }
+            
+            // Validate phone number
+            const phone = document.getElementById('phone').value.trim();
+            if (!/^[0-9]{10}$/.test(phone)) {
+                alert('Phone number must be exactly 10 digits');
+                return;
+            }
+            
+            // Validate ID number
+            const idNumber = document.getElementById('idNumber').value.trim();
+            if (!/^[0-9]{8}$/.test(idNumber)) {
+                alert('ID number must be exactly 8 digits');
+                return;
+            }
+            
+            // Store customer details
+            bookingData.customer = {
+                fullName: document.getElementById('fullName').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: phone,
+                idNumber: idNumber
+            };
+            
+            console.log('Customer details saved:', bookingData);
+            
+            // Display summary and go to next step
+            displaySummary();
+            goToStep(4);
+        });
+        
+        // Update selected seats display when moving to step 3
+        function updateStep3SeatDisplay() {
+            const display = document.getElementById('selectedSeatsDisplay');
+            if (display) {
+                display.textContent = bookingData.selectedSeats.length > 0 
+                    ? bookingData.selectedSeats.join(', ') 
+                    : 'None';
+            }
+        }
+        
+        // Call this when entering step 3
+        const originalGoToStep = goToStep;
+        goToStep = function(stepNumber) {
+            originalGoToStep(stepNumber);
+            if (stepNumber === 3) {
+                updateStep3SeatDisplay();
+            }
+        };
+
+        function displaySummary() {
+            const total = bookingData.seats * bookingData.trip.price;
+            const html = `
+                <div style="background: #f5f7ff; padding: 20px; border-radius: 8px;">
+                    <h3>Trip Details</h3>
+                    <div class="summary-item">
+                        <span>Vehicle:</span>
+                        <strong>${bookingData.trip.vehicle_number}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Route:</span>
+                        <strong>${bookingData.trip.route_from} → ${bookingData.trip.route_to}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Date:</span>
+                        <strong>${new Date(bookingData.trip.travel_date).toLocaleDateString()}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Departure Time:</span>
+                        <strong>${bookingData.trip.departure_time}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Selected Seats:</span>
+                        <strong>${bookingData.selectedSeats.join(', ')}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Number of Seats:</span>
+                        <strong>${bookingData.seats}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Price per Seat:</span>
+                        <strong>KSh ${bookingData.trip.price}</strong>
+                    </div>
+                    
+                    <h3 style="margin-top: 30px;">Passenger Details</h3>
+                    <div class="summary-item">
+                        <span>Name:</span>
+                        <strong>${bookingData.customer.fullName}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Email:</span>
+                        <strong>${bookingData.customer.email}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Phone:</span>
+                        <strong>${bookingData.customer.phone}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>ID Number:</span>
+                        <strong>${bookingData.customer.idNumber}</strong>
+                    </div>
+                    
+                    <div class="summary-total">
+                        Total Amount: KSh ${total}
+                    </div>
+                    
+                    <p style="margin-top: 20px; color: #666; font-size: 14px;">
+                        📱 Payment will be processed via M-Pesa to ${bookingData.customer.phone}
+                    </p>
+                </div>
+            `;
+            
+            document.getElementById('bookingSummary').innerHTML = html;
+        }
+
+        async function confirmBooking() {
+            // Show loading
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            
+            try {
+                // Create guest booking
+                const response = await fetch(`${API_BASE}/bookings/guest`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        trip_id: bookingData.trip.id,
+                        seats_booked: bookingData.seats,
+                        seat_numbers: bookingData.selectedSeats,
+                        customer_name: bookingData.customer.fullName,
+                        customer_email: bookingData.customer.email,
+                        customer_phone: bookingData.customer.phone,
+                        customer_id_number: bookingData.customer.idNumber
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const receiptUrl = `receipt.html?ref=${data.booking.reference_number}`;
+                    
+                    let message = `✅ Booking successful!\n\n`;
+                    message += `📋 Reference: ${data.booking.reference_number}\n`;
+                    message += `💺 Seats: ${data.booking.seat_numbers.join(', ')}\n`;
+                    message += `💰 Amount: KSh ${data.booking.total_amount}\n\n`;
+                    
+                    if (data.account_created) {
+                        message += `🎉 Account Created!\n`;
+                        message += `📧 Email: ${bookingData.customer.email}\n`;
+                        message += `🔑 Password: Your ID number (${bookingData.customer.idNumber})\n\n`;
+                        message += `Login at any time to view your bookings and receipts!\n\n`;
+                    }
+                    
+                    alert(message);
+                    
+                    if (confirm('Would you like to view your receipt now?')) {
+                        window.open(receiptUrl, '_blank');
+                    }
+                    
+                    if (data.account_created) {
+                        if (confirm('Would you like to login now to view your bookings?')) {
+                            window.location.href = 'login.html';
+                            return;
+                        }
+                    }
+                    
+                    // Redirect to home after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
+                } else {
+                    alert('Booking failed: ' + data.error);
+                    btn.disabled = false;
+                    btn.textContent = 'Confirm & Pay via M-Pesa';
+                }
+            } catch (error) {
+                alert('Booking failed. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Confirm & Pay via M-Pesa';
+            }
+        }
+
+        function goToStep(stepNumber) {
+            // Update step indicators
+            document.querySelectorAll('.wizard-step').forEach((step) => {
+                const stepNum = parseFloat(step.dataset.step);
+                step.classList.remove('active', 'completed');
+                if (stepNum < stepNumber) {
+                    step.classList.add('completed');
+                } else if (stepNum === stepNumber) {
+                    step.classList.add('active');
+                }
+            });
+            
+            // Show correct panel
+            document.querySelectorAll('.wizard-panel').forEach((panel) => {
+                panel.classList.remove('active');
+            });
+            
+            // Map step numbers to panel IDs
+            const panelMap = {
+                1: 'step1',
+                2: 'step2',
+                2.5: 'step2_5',
+                3: 'step3',
+                4: 'step4'
+            };
+            
+            const panelId = panelMap[stepNumber];
+            if (panelId) {
+                document.getElementById(panelId).classList.add('active');
+            }
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

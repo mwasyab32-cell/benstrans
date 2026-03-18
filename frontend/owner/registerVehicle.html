@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Vehicle - Bens Trans</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/chatbox.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="nav">
+                <div class="logo">Bens Trans Owner</div>
+                <div class="nav-links">
+                    <a href="manageVehicles.html" class="btn" style="background: #28a745; color: white; text-decoration: none; margin-right: 10px;">Manage My Vehicles</a>
+                    <span id="ownerName"></span>
+                    <button class="btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Register New Vehicle</h2>
+            
+            <div class="alert alert-info" style="margin-bottom: 20px;">
+                <strong>ℹ️ Registration Process:</strong>
+                <ol style="margin: 10px 0 0 20px;">
+                    <li>Fill out the vehicle details below</li>
+                    <li>Pay the registration fee (KSh 3,000 for shuttle, KSh 5,000 for bus)</li>
+                    <li>Your vehicle will be automatically approved and immediately available for bookings</li>
+                    <li>Clients can start booking your vehicle right away</li>
+                </ol>
+            </div>
+            
+            <form id="vehicleForm">
+                <div class="form-group">
+                    <label for="vehicle_type">Vehicle Type:</label>
+                    <select id="vehicle_type" required onchange="updateRegistrationFee()">
+                        <option value="">Select vehicle type</option>
+                        <option value="bus">Bus (KSh 5,000 registration fee)</option>
+                        <option value="shuttle">Shuttle (KSh 3,000 registration fee)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="vehicle_number">Vehicle Number:</label>
+                    <input type="text" id="vehicle_number" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="route_from">Route From:</label>
+                    <input type="text" id="route_from" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="route_to">Route To:</label>
+                    <input type="text" id="route_to" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="total_seats">Total Seats:</label>
+                    <input type="number" id="total_seats" min="1" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="price">Price per Seat (KSh):</label>
+                    <input type="number" id="price" min="0" step="0.01" required>
+                </div>
+                
+                <div id="registrationFeeInfo" class="alert alert-info" style="display: none;">
+                    <strong>Registration Fee:</strong> <span id="feeAmount"></span>
+                </div>
+                
+                <button type="submit" class="btn">Register Vehicle & Pay Fee</button>
+            </form>
+            
+            <div id="message"></div>
+        </div>
+        
+        <div class="card">
+            <h2>My Vehicles</h2>
+            <div id="myVehicles"></div>
+        </div>
+        
+        <div class="card" id="scheduleSection" style="display: none;">
+            <h2>Create Daily Schedule</h2>
+            <form id="scheduleForm">
+                <div class="form-group">
+                    <label for="schedule_vehicle">Select Vehicle:</label>
+                    <select id="schedule_vehicle" required>
+                        <option value="">Select a vehicle</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Days of Week:</label>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px;">
+                        <label><input type="checkbox" value="1" name="days"> Monday</label>
+                        <label><input type="checkbox" value="2" name="days"> Tuesday</label>
+                        <label><input type="checkbox" value="3" name="days"> Wednesday</label>
+                        <label><input type="checkbox" value="4" name="days"> Thursday</label>
+                        <label><input type="checkbox" value="5" name="days"> Friday</label>
+                        <label><input type="checkbox" value="6" name="days"> Saturday</label>
+                        <label><input type="checkbox" value="0" name="days"> Sunday</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Departure Times:</label>
+                    <div id="timeSlots">
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <input type="time" name="times" required>
+                            <button type="button" onclick="addTimeSlot()" class="btn">Add Time</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn">Create Daily Schedule</button>
+            </form>
+        </div>
+        
+        <div class="card">
+            <h2>My Trips</h2>
+            <div id="myTrips"></div>
+        </div>
+    </div>
+    
+    <script src="../js/auth.js"></script>
+    <script src="../js/chatbox.js"></script>
+    <script>
+        // Check if user is owner and approved
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.role !== 'owner') {
+            alert('You must be logged in as an owner to access this page.');
+            window.location.href = '../login.html';
+        }
+        
+        if (user.status === 'pending') {
+            document.getElementById('vehicleForm').style.display = 'none';
+            document.getElementById('tripSection').style.display = 'none';
+            showMessage('Your owner account is pending admin approval. Please wait for approval before registering vehicles.', 'warning');
+        } else {
+            document.getElementById('ownerName').textContent = user.name;
+            
+            // Vehicle registration form
+            document.getElementById('vehicleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            console.log('Form submitted');
+            
+            const formData = {
+                vehicle_type: document.getElementById('vehicle_type').value,
+                vehicle_number: document.getElementById('vehicle_number').value,
+                route_from: document.getElementById('route_from').value,
+                route_to: document.getElementById('route_to').value,
+                total_seats: parseInt(document.getElementById('total_seats').value),
+                price: parseFloat(document.getElementById('price').value)
+            };
+            
+            console.log('Form data:', formData);
+            console.log('Auth headers:', getAuthHeaders());
+            
+            try {
+                console.log('Sending request to:', `${API_BASE}/vehicles/register`);
+                
+                const response = await fetch(`${API_BASE}/vehicles/register`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(formData)
+                });
+                
+                console.log('Response status:', response.status);
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (response.ok) {
+                    showMessage(`✅ Vehicle registered and approved successfully! Registration fee: KSh ${data.registrationFee}. Your vehicle is now active and available for client bookings.`, 'success');
+                    document.getElementById('vehicleForm').reset();
+                    document.getElementById('registrationFeeInfo').style.display = 'none';
+                    loadMyVehicles();
+                } else {
+                    showMessage(data.error || 'Registration failed', 'error');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showMessage('Connection error: Please ensure the server is running on https://benstrans.onrender.com', 'error');
+                } else {
+                    showMessage('Registration failed: ' + error.message, 'error');
+                }
+            }
+        });
+        
+        // Load owner's vehicles
+        async function loadMyVehicles() {
+            try {
+                const response = await fetch(`${API_BASE}/vehicles/my-vehicles`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const vehicles = await response.json();
+                
+                let html = '<table class="table"><tr><th>Type</th><th>Vehicle</th><th>Route</th><th>Seats</th><th>Price</th><th>Reg. Fee</th><th>Status</th><th>Date</th></tr>';
+                let approvedVehicles = [];
+                let pendingCount = 0;
+                
+                vehicles.forEach(vehicle => {
+                    if (vehicle.status === 'pending') pendingCount++;
+                    const statusBadge = vehicle.status === 'approved' ? 'badge-success' : vehicle.status === 'rejected' ? 'badge-danger' : 'badge-warning';
+                    const statusText = vehicle.status === 'approved' ? 'ACTIVE' : vehicle.status === 'pending' ? 'PENDING' : vehicle.status.toUpperCase();
+                    html += `
+                        <tr ${vehicle.status === 'pending' ? 'style="background-color: #fff3cd;"' : ''}>
+                            <td><span class="badge ${vehicle.vehicle_type === 'bus' ? 'badge-primary' : 'badge-secondary'}">${vehicle.vehicle_type}</span></td>
+                            <td>${vehicle.vehicle_number}</td>
+                            <td>${vehicle.route_from} → ${vehicle.route_to}</td>
+                            <td>${vehicle.total_seats}</td>
+                            <td>KSh ${vehicle.price}</td>
+                            <td>KSh ${vehicle.registration_fee || 0}</td>
+                            <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                            <td>${vehicle.registration_date || 'N/A'}</td>
+                        </tr>
+                    `;
+                    
+                    if (vehicle.status === 'approved') {
+                        approvedVehicles.push(vehicle);
+                    }
+                });
+                html += '</table>';
+                
+                // Add pending notification
+                if (pendingCount > 0) {
+                    html = `<div class="alert alert-warning" style="margin-bottom: 15px;"><strong>⏳ ${pendingCount} vehicle(s) pending approval.</strong> Contact admin if this takes too long.</div>` + html;
+                }
+                
+                document.getElementById('myVehicles').innerHTML = html;
+                
+                // Update trip vehicle dropdown
+                const scheduleVehicleSelect = document.getElementById('schedule_vehicle');
+                scheduleVehicleSelect.innerHTML = '<option value="">Select a vehicle</option>';
+                
+                approvedVehicles.forEach(vehicle => {
+                    scheduleVehicleSelect.innerHTML += `<option value="${vehicle.id}">${vehicle.vehicle_number} (${vehicle.route_from} → ${vehicle.route_to})</option>`;
+                });
+                
+                // Show/hide schedule section based on approved vehicles
+                document.getElementById('scheduleSection').style.display = approvedVehicles.length > 0 ? 'block' : 'none';
+                
+            } catch (error) {
+                console.error('Error loading vehicles:', error);
+            }
+        }
+        
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="alert alert-${type}" style="margin: 10px 0; padding: 10px; border-radius: 4px; ${type === 'error' ? 'background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;' : type === 'success' ? 'background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;' : 'background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7;'}">${message}</div>`;
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageDiv.innerHTML = '';
+                }, 5000);
+            }
+        }
+        
+        // Trip creation form
+        (function() {
+            const tripForm = document.getElementById('tripForm');
+            if (!tripForm) return; // No trip form on this page, skip attaching handlers
+
+            tripForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const selectedVehicle = document.getElementById('trip_vehicle');
+                const availableSeatsElem = document.getElementById('available_seats');
+
+                if (!selectedVehicle || !availableSeatsElem) {
+                    showMessage('Trip form elements are missing', 'error');
+                    return;
+                }
+
+                const maxSeats = parseInt(selectedVehicle.options[selectedVehicle.selectedIndex].dataset.seats || '0');
+                const availableSeats = parseInt(availableSeatsElem.value || '0');
+
+                if (availableSeats > maxSeats) {
+                    showMessage(`Available seats cannot exceed ${maxSeats}`, 'error');
+                    return;
+                }
+
+                const formData = {
+                    vehicle_id: parseInt(selectedVehicle.value),
+                    travel_date: document.getElementById('travel_date')?.value,
+                    departure_time: document.getElementById('departure_time')?.value,
+                    available_seats: availableSeats
+                };
+
+                try {
+                    const response = await fetch(`${API_BASE}/vehicles/trips`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showMessage('Trip created successfully!', 'success');
+                        tripForm.reset();
+                        loadMyTrips();
+                    } else {
+                        showMessage(data.error, 'error');
+                    }
+                } catch (error) {
+                    showMessage('Trip creation failed', 'error');
+                }
+            });
+        })();
+        
+        // Schedule creation form
+        document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const vehicleId = parseInt(document.getElementById('schedule_vehicle').value);
+            const dayCheckboxes = document.querySelectorAll('input[name="days"]:checked');
+            const timeInputs = document.querySelectorAll('input[name="times"]');
+            
+            const daysOfWeek = Array.from(dayCheckboxes).map(cb => cb.value);
+            const departureTimes = Array.from(timeInputs).map(input => input.value).filter(time => time);
+            
+            if (daysOfWeek.length === 0) {
+                showMessage('Please select at least one day of the week', 'error');
+                return;
+            }
+            
+            if (departureTimes.length === 0) {
+                showMessage('Please add at least one departure time', 'error');
+                return;
+            }
+            
+            const formData = {
+                vehicle_id: vehicleId,
+                days_of_week: daysOfWeek,
+                departure_times: departureTimes
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/vehicles/schedule`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Daily schedule created successfully! Trips will be auto-generated.', 'success');
+                    document.getElementById('scheduleForm').reset();
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Schedule creation failed', 'error');
+            }
+        });
+        
+        // Load owner's trips
+        async function loadMyTrips() {
+            try {
+                const response = await fetch(`${API_BASE}/vehicles/my-trips`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load trips');
+                }
+                
+                const trips = await response.json();
+                
+                // Check if trips is an array
+                if (!Array.isArray(trips)) {
+                    console.error('Invalid response format:', trips);
+                    document.getElementById('myTrips').innerHTML = '<p>Error loading trips. Please try again.</p>';
+                    return;
+                }
+                
+                if (trips.length === 0) {
+                    document.getElementById('myTrips').innerHTML = '<p>No trips created yet.</p>';
+                    return;
+                }
+                
+                let html = '<table class="table"><tr><th>Vehicle</th><th>Route</th><th>Date</th><th>Time</th><th>Available</th><th>Remaining</th><th>Price</th></tr>';
+                trips.forEach(trip => {
+                    html += `
+                        <tr>
+                            <td>${trip.vehicle_number}</td>
+                            <td>${trip.route_from} → ${trip.route_to}</td>
+                            <td>${new Date(trip.travel_date).toLocaleDateString()}</td>
+                            <td>${trip.departure_time}</td>
+                            <td>${trip.available_seats}</td>
+                            <td>${trip.remaining_seats}</td>
+                            <td>KSh ${trip.price}</td>
+                        </tr>
+                    `;
+                });
+                html += '</table>';
+                
+                document.getElementById('myTrips').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading trips:', error);
+                document.getElementById('myTrips').innerHTML = '<p style="color: red;">Error loading trips. Please try again later.</p>';
+            }
+        }
+        
+            // Load vehicles and trips on page load
+            loadMyVehicles();
+            loadMyTrips();
+            
+            // Update available seats max when vehicle is selected
+            (function() {
+                const tripVehicleSelect = document.getElementById('trip_vehicle');
+                if (!tripVehicleSelect) return;
+
+                tripVehicleSelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const maxSeats = selectedOption?.dataset?.seats;
+                    const availableSeatsElem = document.getElementById('available_seats');
+                    if (maxSeats && availableSeatsElem) {
+                        availableSeatsElem.max = maxSeats;
+                        availableSeatsElem.placeholder = `Max: ${maxSeats} seats`;
+                    }
+                });
+            })();
+        }
+        
+        // Update registration fee display
+        function updateRegistrationFee() {
+            const vehicleType = document.getElementById('vehicle_type').value;
+            const feeInfo = document.getElementById('registrationFeeInfo');
+            const feeAmount = document.getElementById('feeAmount');
+            
+            if (vehicleType === 'bus') {
+                feeAmount.textContent = 'KSh 5,000';
+                feeInfo.style.display = 'block';
+            } else if (vehicleType === 'shuttle') {
+                feeAmount.textContent = 'KSh 3,000';
+                feeInfo.style.display = 'block';
+            } else {
+                feeInfo.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

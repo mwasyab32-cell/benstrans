@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Routes - Bens Trans</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="logo.jpeg">
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/navigation.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/routes.css">
+    <link rel="stylesheet" href="css/page-navigation.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html">
+                <div class="nav-logo">
+                    <img src="logo.jpeg" alt="Bens Trans Logo" style="height: 40px; margin-right: 10px; vertical-align: middle; border-radius: 5px;">
+                    <h2 style="display: inline-block; vertical-align: middle;">Bens Trans</h2>
+                </div>
+            </a>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="services.html" class="nav-link">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a href="about.html" class="nav-link">About</a>
+                </li>
+                <li class="nav-item">
+                    <a href="contact.html" class="nav-link">Contact</a>
+                </li>
+                <li class="nav-item">
+                    <a href="login.html" class="nav-link login-btn">Login</a>
+                </li>
+                <li class="nav-item">
+                    <a href="register.html" class="nav-link register-btn">Register</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Navigation -->
+    <div class="page-navigation">
+        <a href="index.html" class="nav-btn nav-btn-prev">Back to Home</a>
+        <div class="nav-spacer"></div>
+        <a href="book-now.html" class="nav-btn nav-btn-next">Book a Trip</a>
+    </div>
+
+    <div class="page-header">
+        <h1>Available Routes</h1>
+        <p>Explore all our destinations and find your perfect journey</p>
+    </div>
+
+    <div class="routes-container">
+        <div class="search-filter">
+            <input type="text" id="searchInput" placeholder="🔍 Search routes (e.g., Nairobi, Mombasa, Kisumu...)">
+        </div>
+
+        <div id="routesGrid" class="routes-grid">
+            <div class="loading">Loading available routes...</div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="container">
+                <div class="footer-grid">
+                    <div class="footer-section">
+                        <div class="footer-logo">
+                            <h3>Bens Trans</h3>
+                            <p>Your reliable partner for comfortable and safe transportation across Kenya.</p>
+                        </div>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Quick Links</h4>
+                        <ul class="footer-links">
+                            <li><a href="index.html">Home</a></li>
+                            <li><a href="services.html">Services</a></li>
+                            <li><a href="about.html">About</a></li>
+                            <li><a href="contact.html">Contact</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Contact Us</h4>
+                        <div class="contact-info">
+                            <div class="contact-item">
+                                <span class="contact-icon">📞</span>
+                                <p>+254 748 648 015</p>
+                            </div>
+                            <div class="contact-item">
+                                <span class="contact-icon">✉️</span>
+                                <p>info@benstrans.com</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="container">
+                <div class="footer-bottom-content">
+                    <div class="footer-copyright">
+                        <p>&copy; 2024 Bens Trans. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/navigation.js"></script>
+    <script>
+        const API_URL = 'https://benstrans.onrender.com/api';
+        let allRoutes = [];
+
+        // Load routes on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRoutes();
+            
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                filterRoutes(e.target.value);
+            });
+        });
+
+        async function loadRoutes() {
+            try {
+                const response = await fetch(`${API_URL}/vehicles/routes`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load routes');
+                }
+                
+                allRoutes = await response.json();
+                displayRoutes(allRoutes);
+            } catch (error) {
+                console.error('Error loading routes:', error);
+                document.getElementById('routesGrid').innerHTML = `
+                    <div class="no-routes">
+                        <h3>Unable to load routes</h3>
+                        <p>Please try again later or contact support.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayRoutes(routes) {
+            const grid = document.getElementById('routesGrid');
+            
+            if (routes.length === 0) {
+                grid.innerHTML = `
+                    <div class="no-routes">
+                        <h3>No routes available</h3>
+                        <p>Check back soon for new destinations!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = routes.map(route => `
+                <div class="route-card">
+                    <div class="route-header">
+                        <div class="route-path">
+                            <span>${route.route_from}</span>
+                            <span class="route-arrow">→</span>
+                            <span>${route.route_to}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="route-info">
+                        <div class="info-row">
+                            <span class="info-label">Available Vehicles</span>
+                            <span class="vehicle-count">${route.vehicle_count} vehicle${route.vehicle_count > 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Starting Price</span>
+                            <span class="price-tag">KSh ${route.min_price}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Vehicle Types</span>
+                            <span class="info-value">${route.vehicle_types}</span>
+                        </div>
+                    </div>
+                    
+                    <button class="book-btn" onclick="bookRoute('${route.route_from}', '${route.route_to}')">
+                        Book This Route
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function filterRoutes(searchTerm) {
+            const filtered = allRoutes.filter(route => {
+                const term = searchTerm.toLowerCase();
+                return route.route_from.toLowerCase().includes(term) || 
+                       route.route_to.toLowerCase().includes(term);
+            });
+            displayRoutes(filtered);
+        }
+
+        function bookRoute(from, to) {
+            // Set date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dateStr = tomorrow.toISOString().split('T')[0];
+            
+            // Redirect to booking page with pre-filled data
+            window.location.href = `book-now.html?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${dateStr}`;
+        }
+    </script>
+</body>
+</html>

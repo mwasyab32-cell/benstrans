@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Bens Trans</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="../css/chatbox.css">
+</head>
+<body class="admin-dashboard">
+    <header class="admin-header">
+        <div class="admin-nav">
+            <div class="admin-logo">
+                <span style="font-size: 1.5rem;">🚌</span>
+                <h2>Bens Trans Admin</h2>
+            </div>
+            <div class="admin-user-info">
+                <div class="user-avatar">👤</div>
+                <span id="adminName">Admin</span>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <!-- Dashboard Stats -->
+        <section class="dashboard-stats">
+            <div class="stat-card users">
+                <div class="stat-header">
+                    <div class="stat-icon">👥</div>
+                    <span class="stat-number" id="totalUsers">0</span>
+                </div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card vehicles">
+                <div class="stat-header">
+                    <div class="stat-icon">🚗</div>
+                    <span class="stat-number" id="totalVehicles">0</span>
+                </div>
+                <div class="stat-label">Total Vehicles</div>
+                <div class="stat-detail">
+                    <small>New today: <span id="newToday">0</span></small>
+                </div>
+            </div>
+            <div class="stat-card bookings">
+                <div class="stat-header">
+                    <div class="stat-icon">🎫</div>
+                    <span class="stat-number" id="totalBookings">0</span>
+                </div>
+                <div class="stat-label">Total Bookings</div>
+            </div>
+            <div class="stat-card contacts">
+                <div class="stat-header">
+                    <div class="stat-icon">📧</div>
+                    <span class="stat-number" id="totalContacts">0</span>
+                </div>
+                <div class="stat-label">Contact Messages</div>
+            </div>
+        </section>
+
+        <!-- Dashboard Tabs -->
+        <section class="dashboard-tabs">
+            <nav class="tab-nav">
+                <button class="tab-btn active" onclick="showTab('pending-owners')">Pending Owners</button>
+                <button class="tab-btn" onclick="showTab('pending-clients')">Pending Clients</button>
+                <button class="tab-btn" onclick="showTab('pending-vehicles')">Pending Vehicles</button>
+                <button class="tab-btn" onclick="showTab('all-vehicles')">All Vehicles</button>
+                <button class="tab-btn" onclick="showTab('new-vehicles')">New Vehicles</button>
+                <button class="tab-btn" onclick="showTab('all-users')">All Users</button>
+                <button class="tab-btn" onclick="showTab('contact-messages')">Contact Messages</button>
+                <a href="bookings.html" class="tab-btn" style="background: #28a745; color: white; text-decoration: none;">📋 View All Bookings</a>
+            </nav>
+
+            <!-- Pending Owners Tab -->
+            <div id="pending-owners" class="tab-pane active">
+                <div class="tab-content">
+                    <div class="section-header">
+                        <h3 class="section-title">Pending Owner Approvals</h3>
+                        <button class="refresh-btn" onclick="loadPendingOwners()">🔄 Refresh</button>
+                    </div>
+                    <div id="pendingOwnersContent">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading pending owners...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Clients Tab -->
+            <div id="pending-clients" class="tab-pane">
+                <div class="tab-content">
+                    <div class="section-header">
+                        <h3 class="section-title">Pending Client Approvals</h3>
+                        <button class="refresh-btn" onclick="loadPendingClients()">🔄 Refresh</button>
+                    </div>
+                    <div id="pendingClientsContent">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading pending clients...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Vehicles Tab -->
+            <div id="pending-vehicles" class="tab-pane">
+                <div class="tab-content">
+                    <div class="section-header">
+                        <h3 class="section-title">Pending Vehicle Approvals</h3>
+                        <button class="refresh-btn" onclick="loadPendingVehicles()">🔄 Refresh</button>
+                    </div>
+                    <div id="pendingVehiclesContent">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading pending vehicles...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Vehicles Tab -->
+            <div id="all-vehicles" class="tab-pane">
+                <div class="tab-content">
+                    <div class="section-header">
+                        <h3 class="section-title">All Vehicles in System</h3>
+                        <button class="refresh-btn" onclick="loadAllVehicles()">🔄 Refresh</button>
+                    </div>
+                    <div id="allVehiclesContent">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading all vehicles...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Vehicles Tab -->
+            <div id="new-vehicles" class="tab-pane">
+                <div class="tab-content">
+                    <div class="section-header">
+                        <h3 class="section-title">Recently Registered Vehicles (Last 7 Days)</h3>
+                        <button class="refresh-btn" onclick="loadNewVehicles()">🔄 Refresh</button>
+                    </div>
+                    <div id="newVehiclesContent">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading new vehicles...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Users Tab -->
+            <div id="all-users" class="tab-pane">
+                <div class="tab-content">
+                    <div class="section-header">
+                        <h3 class="section-title">All System Users</h3>
+                        <button class="refresh-btn" onclick="loadAllUsers()">🔄 Refresh</button>
+                    </div>
+                    <div id="allUsersContent">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading users...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Messages Tab -->
+            <div id="contact-messages" class="tab-pane">
+                <div class="tab-content">
+                    <div class="section-header">
+                        <h3 class="section-title">Contact Form Messages</h3>
+                        <div>
+                            <a href="chat.html" class="btn" style="background: #28a745; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; margin-right: 10px;">
+                                💬 Open Chat Interface
+                            </a>
+                            <button class="refresh-btn" onclick="loadContactMessages()">🔄 Refresh</button>
+                        </div>
+                    </div>
+                    <div id="contactMessagesContent">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading messages...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Contact Message Details</h3>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <div id="alertMessage"></div>
+
+    <script src="../js/auth.js"></script>
+    <script src="../js/chatbox.js"></script>
+    <script src="../js/admin-dashboard.js"></script>
+</body>
+</html>

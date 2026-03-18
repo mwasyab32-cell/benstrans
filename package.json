@@ -1,0 +1,37 @@
+{
+  "name": "benstrans-booking-system",
+  "version": "1.0.0",
+  "description": "Vehicle booking system for Bens Trans Travel Company",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "init-db": "node backend/init-database.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "booking",
+    "vehicle",
+    "transport",
+    "travel"
+  ],
+  "author": "Bens Trans",
+  "license": "ISC",
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "dependencies": {
+    "africastalking": "^0.7.9",
+    "axios": "^1.13.4",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.6.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
