@@ -10,14 +10,18 @@ const register = async (req, res) => {
         
         const hashedPassword = await bcrypt.hash(password, 10);
         
+        // Auto-approve all users on registration
         const [result] = await connection.execute(
-            'INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)',
-            [name, email, phone, hashedPassword, role]
+            'INSERT INTO users (name, email, phone, password, role, status) VALUES (?, ?, ?, ?, ?, ?)',
+            [name, email, phone, hashedPassword, role, 'approved']
         );
         
         await connection.end();
-        res.status(201).json({ message: 'User registered successfully', userId: result.insertId });
+        res.status(201).json({ message: 'Registration successful! You can now login.', userId: result.insertId });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ error: 'Email already registered' });
+        }
         res.status(500).json({ error: error.message });
     }
 };
@@ -61,9 +65,10 @@ const login = async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
         
-        if (user.status === 'pending' && user.role !== 'admin') {
-            await connection.end();
-            return res.status(403).json({ error: 'Account pending approval' });
+        if (user.status === 'pending') {
+            // Auto-approve on login if still pending
+            await connection.execute("UPDATE users SET status = 'approved' WHERE id = ?", [user.id]);
+            user.status = 'approved';
         }
         
         const token = jwt.sign(
