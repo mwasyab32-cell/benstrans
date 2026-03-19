@@ -23,11 +23,9 @@ router.get('/debug-fix-admin', async (req, res) => {
             email: u.email,
             role: u.role,
             status: u.status,
-            password_is_hashed: u.password ? u.password.startsWith('$2b$') : false
+            password_is_hashed: u.password ? u.password.startsWith('$2b$') : false,
+            password_preview: u.password ? u.password.substring(0, 15) : 'NULL'
         }));
-
-        // Approve ALL pending users
-        await connection.execute("UPDATE users SET status = 'approved' WHERE status = 'pending'");
 
         // Force recreate admin with fresh hash
         await connection.execute('DELETE FROM users WHERE email = ?', ['admin@benstrans.com']);
@@ -37,17 +35,17 @@ router.get('/debug-fix-admin', async (req, res) => {
             ['Admin', 'admin@benstrans.com', '0700000000', newHash, 'admin', 'approved']
         );
 
-        // Show updated users
-        const [updatedUsers] = await connection.execute(
-            'SELECT id, name, email, role, status FROM users'
-        );
+        // Verify
+        const [admin] = await connection.execute('SELECT * FROM users WHERE email = ?', ['admin@benstrans.com']);
+        const passwordWorks = await bcrypt.compare('admin123', admin[0].password);
 
         await connection.end();
 
         res.json({
-            before: userInfo,
-            after: updatedUsers,
-            message: 'All users approved. Admin password reset to admin123'
+            existing_users_before_fix: userInfo,
+            fix_applied: true,
+            password_test: passwordWorks ? 'PASS - login will work' : 'FAIL - something is wrong',
+            login_with: { email: 'admin@benstrans.com', password: 'admin123' }
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
