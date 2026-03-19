@@ -37,11 +37,11 @@ const getPendingVehicles = async (req, res) => {
         const connection = await createConnection();
         
         const [vehicles] = await connection.execute(`
-            SELECT v.*, u.name as owner_name, u.email as owner_email, 
-                   DATE_FORMAT(v.created_at, "%Y-%m-%d %H:%i") as registration_date
+            SELECT v.*, u.name as owner_name, u.email as owner_email,
+                   DATE_FORMAT(v.created_at, '%Y-%m-%d %H:%i') as registration_date
             FROM vehicles v
             JOIN users u ON v.owner_id = u.id
-            WHERE v.status = "pending"
+            WHERE v.status = 'pending'
             ORDER BY v.created_at DESC
         `);
         
@@ -112,10 +112,10 @@ const getNewVehicles = async (req, res) => {
         
         const [vehicles] = await connection.execute(`
             SELECT v.*, u.name as owner_name, u.email as owner_email,
-                   DATE_FORMAT(v.created_at, "%Y-%m-%d %H:%i") as registration_date
+                   DATE_FORMAT(v.created_at, '%Y-%m-%d %H:%i') as registration_date
             FROM vehicles v
             JOIN users u ON v.owner_id = u.id
-            WHERE DATE(v.created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAYS)
+            WHERE v.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
             ORDER BY v.created_at DESC
         `);
         
@@ -134,10 +134,10 @@ const getAllBookings = async (req, res) => {
             SELECT b.*, 
                    v.vehicle_number, v.route_from, v.route_to,
                    t.travel_date, t.departure_time
-            FROM bookings b
+            FROM booking b
             JOIN trips t ON b.trip_id = t.id
             JOIN vehicles v ON t.vehicle_id = v.id
-            ORDER BY b.created_at DESC
+            ORDER BY b.booking_date DESC
         `);
         
         await connection.end();

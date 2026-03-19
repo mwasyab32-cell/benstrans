@@ -17,10 +17,62 @@ const { createConnection } = require('./config/db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Auto-create admin user on startup
+// Auto-create missing tables and admin user on startup
 async function ensureAdminExists() {
     try {
         const connection = await createConnection();
+
+        // Create messages table if missing
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS messages (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                sender_id INT NOT NULL,
+                receiver_id INT NOT NULL,
+                subject VARCHAR(255),
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+
+        // Create conversations table if missing
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS conversations (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                owner_id INT NOT NULL,
+                admin_id INT NOT NULL,
+                last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_conversation (owner_id, admin_id)
+            )
+        `);
+
+        // Create sms_logs table if missing
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS sms_logs (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                phone_number VARCHAR(20) NOT NULL,
+                message TEXT NOT NULL,
+                message_id VARCHAR(100),
+                status VARCHAR(50) DEFAULT 'pending',
+                cost VARCHAR(20),
+                network VARCHAR(50),
+                delivery_status VARCHAR(50),
+                failure_reason TEXT,
+                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                delivered_at TIMESTAMP NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+
+        console.log('✅ All tables verified');
+
+        // Ensure admin exists
         const [existing] = await connection.execute(
             'SELECT id FROM users WHERE email = ? AND role = ?',
             ['admin@benstrans.com', 'admin']
@@ -37,7 +89,7 @@ async function ensureAdminExists() {
         }
         await connection.end();
     } catch (err) {
-        console.error('⚠️  Could not ensure admin exists:', err.message);
+        console.error('⚠️  Startup setup error:', err.message);
     }
 }
 
