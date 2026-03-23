@@ -55,7 +55,7 @@ const registerVehicle = async (req, res) => {
         
         // Auto-approve vehicle upon registration (payment assumed to be made)
         const [result] = await connection.execute(
-            'INSERT INTO vehicles (owner_id, vehicle_number, route_from, route_to, total_seats, price, vehicle_type, registration_fee, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, "approved")',
+            "INSERT INTO vehicles (owner_id, vehicle_number, route_from, route_to, total_seats, price, vehicle_type, registration_fee, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'approved')",
             [owner_id, vehicle_number, route_from, route_to, total_seats, price, vehicle_type, registrationFee]
         );
         
