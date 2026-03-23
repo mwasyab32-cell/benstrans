@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
     route_to VARCHAR(100),
     total_seats INT,
     price DECIMAL(10,2),
+    registration_fee DECIMAL(10,2) DEFAULT 0,
     status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
