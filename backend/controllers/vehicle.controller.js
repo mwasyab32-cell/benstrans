@@ -190,7 +190,7 @@ const getMyTrips = async (req, res) => {
                    (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
             FROM trips t
             JOIN vehicles v ON t.vehicle_id = v.id
-            LEFT JOIN booking b ON t.id = b.trip_id
+            LEFT JOIN bookings b ON t.id = b.trip_id
             WHERE v.owner_id = ?
             GROUP BY t.id
             ORDER BY t.travel_date DESC, t.departure_time DESC
@@ -219,7 +219,7 @@ const searchTrips = async (req, res) => {
                    (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
             FROM trips t
             JOIN vehicles v ON t.vehicle_id = v.id
-            LEFT JOIN booking b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
+            LEFT JOIN bookings b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
             WHERE LOWER(v.route_from) = LOWER(?) 
               AND LOWER(v.route_to) = LOWER(?) 
               AND t.travel_date = ? 
@@ -257,7 +257,7 @@ const searchTrips = async (req, res) => {
                        (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
                 FROM trips t
                 JOIN vehicles v ON t.vehicle_id = v.id
-                LEFT JOIN booking b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
+                LEFT JOIN bookings b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
                 WHERE LOWER(v.route_from) = LOWER(?) 
                   AND LOWER(v.route_to) = LOWER(?) 
                   AND t.travel_date = ? 
@@ -289,7 +289,7 @@ const searchTripsFlexible = async (req, res) => {
                    DATEDIFF(t.travel_date, ?) as date_diff
             FROM trips t
             JOIN vehicles v ON t.vehicle_id = v.id
-            LEFT JOIN booking b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
+            LEFT JOIN bookings b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
             WHERE (v.route_from LIKE ? OR v.route_from = ?) 
               AND (v.route_to LIKE ? OR v.route_to = ?)
               AND v.status = 'approved'

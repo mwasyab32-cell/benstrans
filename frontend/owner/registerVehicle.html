@@ -203,6 +203,11 @@
                 });
                 
                 const vehicles = await response.json();
+
+                if (!response.ok || !Array.isArray(vehicles)) {
+                    document.getElementById('myVehicles').innerHTML = '<p style="color:red">Error loading vehicles. Please try again.</p>';
+                    return;
+                }
                 
                 let html = '<table class="table"><tr><th>Type</th><th>Vehicle</th><th>Route</th><th>Seats</th><th>Price</th><th>Reg. Fee</th><th>Status</th><th>Date</th></tr>';
                 let approvedVehicles = [];

@@ -12,7 +12,7 @@ async function initDatabase() {
         await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
 
         // Drop all tables
-        const tables = ['sms_logs', 'payments', 'bookings', 'booking', 'trips', 'vehicles', 'contacts', 'messages', 'users'];
+        const tables = ['sms_logs', 'payments', 'bookings', 'booking', 'trips', 'vehicle_schedules', 'vehicles', 'contacts', 'messages', 'conversations', 'users'];
         for (const table of tables) {
             await connection.execute(`DROP TABLE IF EXISTS ${table}`);
             console.log(`Dropped table: ${table}`);
@@ -47,6 +47,7 @@ async function initDatabase() {
                 route_to VARCHAR(100),
                 total_seats INT,
                 price DECIMAL(10,2),
+                registration_fee DECIMAL(10,2) DEFAULT 0,
                 status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
@@ -139,6 +140,36 @@ async function initDatabase() {
             )
         `);
         console.log('Created sms_logs table ✅');
+
+        // Create messages table
+        await connection.execute(`
+            CREATE TABLE messages (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                sender_id INT,
+                receiver_id INT,
+                subject VARCHAR(255) DEFAULT 'No Subject',
+                message TEXT NOT NULL,
+                is_read TINYINT(1) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE SET NULL
+            )
+        `);
+        console.log('Created messages table ✅');
+
+        // Create conversations table
+        await connection.execute(`
+            CREATE TABLE conversations (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                owner_id INT,
+                admin_id INT,
+                last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_conversation (owner_id, admin_id),
+                FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+        console.log('Created conversations table ✅');
 
         // Insert admin user
         const adminPassword = await bcrypt.hash('admin123', 10);
