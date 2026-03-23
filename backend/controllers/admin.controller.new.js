@@ -159,7 +159,7 @@ const getBookingStats = async (req, res) => {
                 COUNT(*) as total_bookings,
                 SUM(seats_booked) as total_seats_booked,
                 COUNT(DISTINCT client_id) as unique_clients
-            FROM booking
+            FROM bookings
         `);
         await connection.end();
         res.json(stats[0]);
@@ -203,7 +203,7 @@ const getAllBookings = async (req, res) => {
             SELECT b.*, 
                    v.vehicle_number, v.route_from, v.route_to,
                    t.travel_date, t.departure_time
-            FROM booking b
+            FROM bookings b
             JOIN trips t ON b.trip_id = t.id
             JOIN vehicles v ON t.vehicle_id = v.id
             ORDER BY b.booking_date DESC

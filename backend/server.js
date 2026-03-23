@@ -8,6 +8,7 @@ const vehicleRoutes = require('./routes/vehicle.routes');
 const bookingRoutes = require('./routes/booking.routes');
 const adminRoutes = require('./routes/admin.routes');
 const contactRoutes = require('./routes/contact.routes');
+const messageRoutes = require('./routes/message.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +24,7 @@ app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Serve frontend
 app.get('/', (req, res) => {
