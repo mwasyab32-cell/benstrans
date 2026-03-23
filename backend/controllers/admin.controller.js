@@ -5,7 +5,7 @@ const getPendingOwners = async (req, res) => {
         const connection = await createConnection();
         
         const [users] = await connection.execute(
-            'SELECT id, name, email, phone, role, created_at FROM users WHERE role = "owner" AND status = "pending"'
+            "SELECT id, name, email, phone, role, created_at FROM users WHERE role = 'owner' AND status = 'pending'"
         );
         
         await connection.end();
@@ -21,7 +21,7 @@ const approveUser = async (req, res) => {
         const connection = await createConnection();
         
         await connection.execute(
-            'UPDATE users SET status = "approved" WHERE id = ?',
+            "UPDATE users SET status = 'approved' WHERE id = ?",
             [id]
         );
         
@@ -58,7 +58,7 @@ const approveVehicle = async (req, res) => {
         const connection = await createConnection();
         
         await connection.execute(
-            'UPDATE vehicles SET status = "approved" WHERE id = ?',
+            "UPDATE vehicles SET status = 'approved' WHERE id = ?",
             [id]
         );
         
@@ -75,7 +75,7 @@ const rejectVehicle = async (req, res) => {
         const connection = await createConnection();
         
         await connection.execute(
-            'UPDATE vehicles SET status = "rejected" WHERE id = ?',
+            "UPDATE vehicles SET status = 'rejected' WHERE id = ?",
             [id]
         );
         

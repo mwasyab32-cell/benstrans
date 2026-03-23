@@ -17,7 +17,7 @@ const registerVehicle = async (req, res) => {
         // Validate owner status
         const connection = await createConnection();
         const [ownerCheck] = await connection.execute(
-            'SELECT status FROM users WHERE id = ? AND role = "owner"',
+            "SELECT status FROM users WHERE id = ? AND role = 'owner'",
             [owner_id]
         );
         
