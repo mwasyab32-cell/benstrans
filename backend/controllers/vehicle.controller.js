@@ -192,10 +192,210 @@ const getAllRoutes = async (req, res) => {
     }
 };
 
+// ================= SEARCH TRIPS =================
+const searchTrips = async (req, res) => {
+    let connection;
+    try {
+        const { from, to, date } = req.query;
+        if (!from || !to || !date) {
+            return res.status(400).json({ error: 'from, to, and date are required' });
+        }
+        connection = await createConnection();
+        const [trips] = await connection.execute(`
+            SELECT t.*, v.vehicle_number, v.route_from, v.route_to, v.price, v.vehicle_type,
+                   (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
+            FROM trips t
+            JOIN vehicles v ON t.vehicle_id = v.id
+            LEFT JOIN bookings b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
+            WHERE v.route_from LIKE ? AND v.route_to LIKE ? AND DATE(t.travel_date) = ? AND v.status = 'approved'
+            GROUP BY t.id
+            HAVING remaining_seats > 0
+        `, [`%${from}%`, `%${to}%`, date]);
+        res.json(trips);
+    } catch (error) {
+        console.error('SEARCH TRIPS ERROR:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
+// ================= SEARCH TRIPS FLEXIBLE =================
+const searchTripsFlexible = async (req, res) => {
+    let connection;
+    try {
+        const { from, to } = req.query;
+        if (!from || !to) {
+            return res.status(400).json({ error: 'from and to are required' });
+        }
+        connection = await createConnection();
+        const [trips] = await connection.execute(`
+            SELECT t.*, v.vehicle_number, v.route_from, v.route_to, v.price, v.vehicle_type,
+                   (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
+            FROM trips t
+            JOIN vehicles v ON t.vehicle_id = v.id
+            LEFT JOIN bookings b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
+            WHERE v.route_from LIKE ? AND v.route_to LIKE ? AND v.status = 'approved' AND t.travel_date >= CURDATE()
+            GROUP BY t.id
+            HAVING remaining_seats > 0
+            ORDER BY t.travel_date ASC
+        `, [`%${from}%`, `%${to}%`]);
+        res.json(trips);
+    } catch (error) {
+        console.error('SEARCH TRIPS FLEXIBLE ERROR:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
+// ================= GET TRIP SEATS =================
+const getTripSeats = async (req, res) => {
+    let connection;
+    try {
+        const { trip_id } = req.params;
+        connection = await createConnection();
+        const [trips] = await connection.execute(`
+            SELECT t.*, v.total_seats, v.vehicle_number,
+                   (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
+            FROM trips t
+            JOIN vehicles v ON t.vehicle_id = v.id
+            LEFT JOIN bookings b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
+            WHERE t.id = ?
+            GROUP BY t.id
+        `, [trip_id]);
+        if (trips.length === 0) return res.status(404).json({ error: 'Trip not found' });
+        res.json(trips[0]);
+    } catch (error) {
+        console.error('GET TRIP SEATS ERROR:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
+// ================= GET VEHICLE BY ID =================
+const getVehicleById = async (req, res) => {
+    let connection;
+    try {
+        const { id } = req.params;
+        const owner_id = req.user.id;
+        connection = await createConnection();
+        const [vehicles] = await connection.execute(
+            'SELECT * FROM vehicles WHERE id = ? AND owner_id = ?',
+            [id, owner_id]
+        );
+        if (vehicles.length === 0) return res.status(404).json({ error: 'Vehicle not found' });
+        res.json(vehicles[0]);
+    } catch (error) {
+        console.error('GET VEHICLE BY ID ERROR:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
+// ================= UPDATE VEHICLE =================
+const updateVehicle = async (req, res) => {
+    let connection;
+    try {
+        const { id } = req.params;
+        const owner_id = req.user.id;
+        const { vehicle_number, route_from, route_to, total_seats, price, vehicle_type } = req.body;
+        connection = await createConnection();
+        const [existing] = await connection.execute(
+            'SELECT id FROM vehicles WHERE id = ? AND owner_id = ?',
+            [id, owner_id]
+        );
+        if (existing.length === 0) return res.status(404).json({ error: 'Vehicle not found' });
+        await connection.execute(
+            'UPDATE vehicles SET vehicle_number=?, route_from=?, route_to=?, total_seats=?, price=?, vehicle_type=? WHERE id=? AND owner_id=?',
+            [vehicle_number, route_from, route_to, total_seats, price, vehicle_type, id, owner_id]
+        );
+        res.json({ message: 'Vehicle updated successfully' });
+    } catch (error) {
+        console.error('UPDATE VEHICLE ERROR:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
+// ================= DELETE VEHICLE =================
+const deleteVehicle = async (req, res) => {
+    let connection;
+    try {
+        const { id } = req.params;
+        const owner_id = req.user.id;
+        connection = await createConnection();
+        const [existing] = await connection.execute(
+            'SELECT id FROM vehicles WHERE id = ? AND owner_id = ?',
+            [id, owner_id]
+        );
+        if (existing.length === 0) return res.status(404).json({ error: 'Vehicle not found' });
+        await connection.execute('DELETE FROM vehicles WHERE id = ? AND owner_id = ?', [id, owner_id]);
+        res.json({ message: 'Vehicle deleted successfully' });
+    } catch (error) {
+        console.error('DELETE VEHICLE ERROR:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
+// ================= GENERATE TRIPS FROM SCHEDULE =================
+const generateTripsFromSchedule = async (req, res) => {
+    let connection;
+    try {
+        const { days_ahead = 7 } = req.body;
+        connection = await createConnection();
+        const [schedules] = await connection.execute(`
+            SELECT vs.*, v.total_seats FROM vehicle_schedules vs
+            JOIN vehicles v ON vs.vehicle_id = v.id
+            WHERE v.status = 'approved'
+        `);
+        let created = 0;
+        const today = new Date();
+        for (const schedule of schedules) {
+            for (let i = 0; i < days_ahead; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                if (date.getDay() == schedule.day_of_week) {
+                    const travelDate = date.toISOString().split('T')[0];
+                    const [existing] = await connection.execute(
+                        'SELECT id FROM trips WHERE vehicle_id=? AND travel_date=? AND departure_time=?',
+                        [schedule.vehicle_id, travelDate, schedule.departure_time]
+                    );
+                    if (existing.length === 0) {
+                        await connection.execute(
+                            'INSERT INTO trips (vehicle_id, travel_date, departure_time, available_seats) VALUES (?,?,?,?)',
+                            [schedule.vehicle_id, travelDate, schedule.departure_time, schedule.total_seats]
+                        );
+                        created++;
+                    }
+                }
+            }
+        }
+        res.json({ message: `Generated ${created} trips` });
+    } catch (error) {
+        console.error('GENERATE TRIPS ERROR:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
 module.exports = {
     registerVehicle,
     getMyVehicles,
     createDailySchedule,
     getMyTrips,
-    getAllRoutes
+    getAllRoutes,
+    searchTrips,
+    searchTripsFlexible,
+    getTripSeats,
+    getVehicleById,
+    updateVehicle,
+    deleteVehicle,
+    generateTripsFromSchedule
 };

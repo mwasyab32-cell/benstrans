@@ -69,7 +69,7 @@ if (document.getElementById('registerForm')) {
             const data = await response.json();
             
             if (response.ok) {
-                showMessage('Registration successful! Please wait for admin approval.', 'success');
+                showMessage('Registration successful! You can now login.', 'success');
                 document.getElementById('registerForm').reset();
             } else {
                 showMessage(data.error, 'error');

@@ -140,7 +140,7 @@
         
         if (user.status === 'pending') {
             document.getElementById('vehicleForm').style.display = 'none';
-            document.getElementById('tripSection').style.display = 'none';
+            document.getElementById('scheduleSection').style.display = 'none';
             showMessage('Your owner account is pending admin approval. Please wait for approval before registering vehicles.', 'warning');
         } else {
             document.getElementById('ownerName').textContent = user.name;

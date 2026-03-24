@@ -642,12 +642,6 @@ window.onclick = function(event) {
     }
 }
 
-// Make functions globally accessible
-window.showTab = showTab;
-window.approveUser = approveUser;
-window.approveVehicle = approveVehicle;
-window.rejectUser = function(userId) { console.log('Reject user:', userId); };
-window.rejectVehicle = rejectVehicle;
 // Reject Vehicle
 async function rejectVehicle(vehicleId) {
     try {
@@ -665,7 +659,13 @@ async function rejectVehicle(vehicleId) {
         showAlert('Error rejecting vehicle', 'error');
     }
 }
-window.viewMessage = viewMessage;
+
+// Make functions globally accessible
+window.showTab = showTab;
+window.approveUser = approveUser;
+window.approveVehicle = approveVehicle;
+window.rejectUser = function(userId) { console.log('Reject user:', userId); };
+window.rejectVehicle = rejectVehicle;
 window.closeModal = closeModal;
 window.loadPendingClients = loadPendingClients;
 window.loadPendingOwners = loadPendingOwners;

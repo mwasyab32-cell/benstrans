@@ -1,5 +1,5 @@
 // Vehicle related functions
-const API_BASE = 'https://benstrans.onrender.com/api';
+// API_BASE is defined in auth.js
 
 // Register a new vehicle
 async function registerVehicle(vehicleData) {

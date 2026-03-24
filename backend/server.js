@@ -16,6 +16,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // handle form submissions
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // Routes
@@ -26,11 +27,12 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/messages', messageRoutes);
 
-// Serve frontend
-app.get('/', (req, res) => {
+// Fallback route to serve frontend (for SPA)
+app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
+// Start server
 app.listen(PORT, () => {
     console.log(`Bens Trans server running on port ${PORT}`);
 });
