@@ -108,6 +108,20 @@ const createDailySchedule = async (req, res) => {
 
         connection = await createConnection();
 
+        // Ensure vehicle_schedules table exists (safety net for fresh deployments)
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS vehicle_schedules (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                vehicle_id INT NOT NULL,
+                departure_time TIME NOT NULL,
+                day_of_week VARCHAR(10) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_schedule (vehicle_id, departure_time, day_of_week),
+                INDEX idx_vehicle_schedule (vehicle_id)
+            )
+        `);
+
         const [vehicle] = await connection.execute(
             'SELECT id, status FROM vehicles WHERE id = ? AND owner_id = ?',
             [vehicle_id, owner_id]
@@ -349,6 +363,34 @@ const generateTripsFromSchedule = async (req, res) => {
     try {
         const { days_ahead = 7 } = req.body;
         connection = await createConnection();
+
+        // Ensure tables exist
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS vehicle_schedules (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                vehicle_id INT NOT NULL,
+                departure_time TIME NOT NULL,
+                day_of_week VARCHAR(10) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_schedule (vehicle_id, departure_time, day_of_week),
+                INDEX idx_vehicle_schedule (vehicle_id)
+            )
+        `);
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS trips (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                vehicle_id INT NOT NULL,
+                travel_date DATE NOT NULL,
+                departure_time TIME NOT NULL,
+                available_seats INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+                INDEX idx_vehicle_id (vehicle_id),
+                INDEX idx_travel_date (travel_date)
+            )
+        `);
+
         const [schedules] = await connection.execute(`
             SELECT vs.*, v.total_seats FROM vehicle_schedules vs
             JOIN vehicles v ON vs.vehicle_id = v.id

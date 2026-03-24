@@ -9,6 +9,7 @@ const bookingRoutes = require('./routes/booking.routes');
 const adminRoutes = require('./routes/admin.routes');
 const contactRoutes = require('./routes/contact.routes');
 const messageRoutes = require('./routes/message.routes');
+const { createConnection } = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,7 +33,102 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
+// Auto-initialize database tables on startup
+async function initDatabase() {
+    let connection;
+    try {
+        connection = await createConnection();
+        const tables = [
+            `CREATE TABLE IF NOT EXISTS users (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                phone VARCHAR(20) NOT NULL,
+                id_number VARCHAR(20) NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                role ENUM('admin','owner','client') DEFAULT 'client',
+                status ENUM('pending','approved','rejected') DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS vehicles (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                owner_id INT NOT NULL,
+                vehicle_number VARCHAR(50) UNIQUE NOT NULL,
+                vehicle_type ENUM('bus','shuttle') DEFAULT 'bus',
+                route_from VARCHAR(100) NOT NULL,
+                route_to VARCHAR(100) NOT NULL,
+                total_seats INT NOT NULL,
+                price DECIMAL(10,2) NOT NULL,
+                registration_fee DECIMAL(10,2) DEFAULT 0,
+                status ENUM('pending','approved','rejected') DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+            )`,
+            `CREATE TABLE IF NOT EXISTS vehicle_schedules (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                vehicle_id INT NOT NULL,
+                departure_time TIME NOT NULL,
+                day_of_week VARCHAR(10) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_schedule (vehicle_id, departure_time, day_of_week)
+            )`,
+            `CREATE TABLE IF NOT EXISTS trips (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                vehicle_id INT NOT NULL,
+                travel_date DATE NOT NULL,
+                departure_time TIME NOT NULL,
+                available_seats INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+            )`,
+            `CREATE TABLE IF NOT EXISTS bookings (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                client_id INT,
+                trip_id INT NOT NULL,
+                seats_booked INT DEFAULT 1,
+                seat_numbers TEXT,
+                total_amount DECIMAL(10,2) NOT NULL,
+                payment_status ENUM('pending','paid','failed','cancelled') DEFAULT 'pending',
+                payment_method VARCHAR(50) DEFAULT 'mpesa',
+                payment_deadline DATETIME,
+                customer_name VARCHAR(100) NOT NULL,
+                customer_email VARCHAR(100),
+                customer_phone VARCHAR(20) NOT NULL,
+                customer_id_number VARCHAR(20),
+                reference_number VARCHAR(50) UNIQUE NOT NULL,
+                booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+            )`,
+            `CREATE TABLE IF NOT EXISTS contacts (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(100) NOT NULL,
+                phone VARCHAR(20),
+                subject VARCHAR(100) NOT NULL,
+                message TEXT NOT NULL,
+                admin_reply TEXT,
+                replied_at TIMESTAMP NULL,
+                client_reply TEXT,
+                client_replied_at TIMESTAMP NULL,
+                status ENUM('new','read','responded') DEFAULT 'new',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`
+        ];
+        for (const sql of tables) {
+            await connection.execute(sql);
+        }
+        console.log('✅ Database tables initialized');
+    } catch (err) {
+        console.error('⚠️ DB init error:', err.message);
+    } finally {
+        if (connection) await connection.end();
+    }
+}
+
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`Bens Trans server running on port ${PORT}`);
+    await initDatabase();
 });
