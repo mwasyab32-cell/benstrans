@@ -12,7 +12,7 @@ async function initDatabase() {
         await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
 
         // Drop all tables
-        const tables = ['sms_logs', 'payments', 'bookings', 'booking', 'trips', 'vehicle_schedules', 'vehicles', 'contacts', 'messages', 'conversations', 'users'];
+        const tables = ['sms_logs', 'payments', 'bookings', 'trips', 'vehicle_schedules', 'vehicles', 'contacts', 'messages', 'conversations', 'users'];
         for (const table of tables) {
             await connection.execute(`DROP TABLE IF EXISTS ${table}`);
             console.log(`Dropped table: ${table}`);
@@ -40,31 +40,49 @@ async function initDatabase() {
         await connection.execute(`
             CREATE TABLE vehicles (
                 id INT PRIMARY KEY AUTO_INCREMENT,
-                owner_id INT,
-                vehicle_number VARCHAR(50) UNIQUE,
+                owner_id INT NOT NULL,
+                vehicle_number VARCHAR(50) UNIQUE NOT NULL,
                 vehicle_type ENUM('bus', 'shuttle') DEFAULT 'bus',
-                route_from VARCHAR(100),
-                route_to VARCHAR(100),
-                total_seats INT,
-                price DECIMAL(10,2),
+                route_from VARCHAR(100) NOT NULL,
+                route_to VARCHAR(100) NOT NULL,
+                total_seats INT NOT NULL,
+                price DECIMAL(10,2) NOT NULL,
                 registration_fee DECIMAL(10,2) DEFAULT 0,
                 status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
+                FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_owner_id (owner_id)
             )
         `);
         console.log('Created vehicles table ✅');
+
+        // Create vehicle_schedules table
+        await connection.execute(`
+            CREATE TABLE vehicle_schedules (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                vehicle_id INT NOT NULL,
+                departure_time TIME NOT NULL,
+                day_of_week VARCHAR(10) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_schedule (vehicle_id, departure_time, day_of_week),
+                INDEX idx_vehicle_schedule (vehicle_id)
+            )
+        `);
+        console.log('Created vehicle_schedules table ✅');
 
         // Create trips table
         await connection.execute(`
             CREATE TABLE trips (
                 id INT PRIMARY KEY AUTO_INCREMENT,
-                vehicle_id INT,
-                travel_date DATE,
-                departure_time TIME,
-                available_seats INT,
+                vehicle_id INT NOT NULL,
+                travel_date DATE NOT NULL,
+                departure_time TIME NOT NULL,
+                available_seats INT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+                INDEX idx_vehicle_id (vehicle_id),
+                INDEX idx_travel_date (travel_date)
             )
         `);
         console.log('Created trips table ✅');
@@ -74,21 +92,23 @@ async function initDatabase() {
             CREATE TABLE bookings (
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 client_id INT,
-                trip_id INT,
+                trip_id INT NOT NULL,
                 seats_booked INT DEFAULT 1,
                 seat_numbers TEXT,
-                total_amount DECIMAL(10,2),
+                total_amount DECIMAL(10,2) NOT NULL,
                 payment_status ENUM('pending', 'paid', 'failed', 'cancelled') DEFAULT 'pending',
                 payment_method VARCHAR(50) DEFAULT 'mpesa',
                 payment_deadline DATETIME,
-                customer_name VARCHAR(100),
+                customer_name VARCHAR(100) NOT NULL,
                 customer_email VARCHAR(100),
-                customer_phone VARCHAR(20),
+                customer_phone VARCHAR(20) NOT NULL,
                 customer_id_number VARCHAR(20),
-                reference_number VARCHAR(50) UNIQUE,
+                reference_number VARCHAR(50) UNIQUE NOT NULL,
                 booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE SET NULL,
-                FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE SET NULL
+                FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
+                INDEX idx_client_id (client_id),
+                INDEX idx_trip_id (trip_id)
             )
         `);
         console.log('Created bookings table ✅');
@@ -97,13 +117,17 @@ async function initDatabase() {
         await connection.execute(`
             CREATE TABLE payments (
                 id INT PRIMARY KEY AUTO_INCREMENT,
-                booking_id INT,
-                amount DECIMAL(10,2),
-                mpesa_receipt_number VARCHAR(50),
-                phone_number VARCHAR(20),
-                status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+                booking_id INT NOT NULL,
+                mpesa_transaction_id VARCHAR(100),
+                mpesa_receipt_number VARCHAR(100),
+                phone_number VARCHAR(20) NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                status ENUM('pending', 'completed', 'failed', 'cancelled') DEFAULT 'pending',
+                mpesa_response TEXT,
                 transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+                INDEX idx_booking_id (booking_id)
             )
         `);
         console.log('Created payments table ✅');
@@ -131,12 +155,20 @@ async function initDatabase() {
         await connection.execute(`
             CREATE TABLE sms_logs (
                 id INT PRIMARY KEY AUTO_INCREMENT,
-                phone_number VARCHAR(20),
-                message TEXT,
+                phone_number VARCHAR(20) NOT NULL,
+                message TEXT NOT NULL,
                 message_id VARCHAR(100),
-                status VARCHAR(50),
-                cost VARCHAR(50),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                status VARCHAR(50) DEFAULT 'pending',
+                cost DECIMAL(10,4),
+                network VARCHAR(50),
+                delivery_status VARCHAR(50),
+                failure_reason TEXT,
+                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                delivered_at TIMESTAMP NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_phone (phone_number),
+                INDEX idx_message_id (message_id),
+                INDEX idx_status (status)
             )
         `);
         console.log('Created sms_logs table ✅');

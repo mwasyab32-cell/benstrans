@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS sms_logs;
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS bookings;
 DROP TABLE IF EXISTS trips;
+DROP TABLE IF EXISTS vehicle_schedules;
 DROP TABLE IF EXISTS vehicles;
 DROP TABLE IF EXISTS contacts;
 DROP TABLE IF EXISTS users;
@@ -46,6 +47,18 @@ CREATE TABLE IF NOT EXISTS vehicles (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_owner_id (owner_id)
+);
+
+-- Vehicle Schedules Table
+CREATE TABLE IF NOT EXISTS vehicle_schedules (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    vehicle_id INT NOT NULL,
+    departure_time TIME NOT NULL,
+    day_of_week VARCHAR(10) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_schedule (vehicle_id, departure_time, day_of_week),
+    INDEX idx_vehicle_schedule (vehicle_id)
 );
 
 -- Trips Table
