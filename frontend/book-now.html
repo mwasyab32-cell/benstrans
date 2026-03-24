@@ -321,17 +321,20 @@
                 <form id="searchForm">
                     <div class="form-group">
                         <label for="from">From:</label>
-                        <input type="text" id="from" required placeholder="e.g., Nairobi">
+                        <input type="text" id="from" required placeholder="e.g., Nairobi" list="fromSuggestions" autocomplete="off">
+                        <datalist id="fromSuggestions"></datalist>
                     </div>
                     <div class="form-group">
                         <label for="to">To:</label>
-                        <input type="text" id="to" required placeholder="e.g., Mombasa">
+                        <input type="text" id="to" required placeholder="e.g., Mombasa" list="toSuggestions" autocomplete="off">
+                        <datalist id="toSuggestions"></datalist>
                     </div>
                     <div class="form-group">
                         <label for="date">Travel Date:</label>
                         <input type="date" id="date" required>
                         <small style="color: #666; font-size: 12px;">Bookings must be made at least 24 hours in advance</small>
                     </div>
+                    <div id="routeHints" style="display:none; margin-bottom:15px;"></div>
                     <div class="wizard-actions">
                         <div></div>
                         <button type="submit" class="btn">Search Vehicles</button>
@@ -441,7 +444,63 @@
         
         if (fromParam) document.getElementById('from').value = fromParam;
         if (toParam) document.getElementById('to').value = toParam;
-        if (dateParam) document.getElementById('date').value = dateParam;
+        if (dateParam) {
+            document.getElementById('date').value = dateParam;
+        } else {
+            // Pre-fill tomorrow's date when no date param
+            document.getElementById('date').value = tomorrow.toISOString().split('T')[0];
+        }
+
+        // Load route suggestions for autocomplete
+        async function loadRouteSuggestions() {
+            try {
+                const response = await fetch(`${API_BASE}/vehicles/routes`);
+                if (!response.ok) return;
+                const routes = await response.json();
+
+                const fromList = document.getElementById('fromSuggestions');
+                const toList = document.getElementById('toSuggestions');
+                const froms = [...new Set(routes.map(r => r.route_from))];
+                const tos = [...new Set(routes.map(r => r.route_to))];
+
+                froms.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f;
+                    fromList.appendChild(opt);
+                });
+                tos.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t;
+                    toList.appendChild(opt);
+                });
+
+                // Show route cards if no URL params
+                if (!fromParam && !toParam) {
+                    const routeHints = document.getElementById('routeHints');
+                    if (routeHints && routes.length > 0) {
+                        routeHints.innerHTML = '<p style="color:#666; margin-bottom:10px;">Popular routes — click to search:</p>' +
+                            routes.slice(0, 6).map(r => `
+                                <button type="button" onclick="quickFill('${r.route_from}','${r.route_to}')"
+                                    style="margin:4px; padding:6px 12px; border:1px solid #667eea; border-radius:20px;
+                                           background:white; color:#667eea; cursor:pointer; font-size:13px;">
+                                    ${r.route_from} → ${r.route_to}
+                                    <span style="color:#28a745; font-weight:bold;"> KSh ${r.min_price}</span>
+                                </button>`).join('');
+                        routeHints.style.display = 'block';
+                    }
+                }
+            } catch (e) {
+                console.error('Could not load route suggestions', e);
+            }
+        }
+
+        function quickFill(from, to) {
+            document.getElementById('from').value = from;
+            document.getElementById('to').value = to;
+            document.getElementById('routeHints').style.display = 'none';
+        }
+
+        loadRouteSuggestions();
         
         // Auto-submit if all parameters are present
         if (fromParam && toParam && dateParam) {

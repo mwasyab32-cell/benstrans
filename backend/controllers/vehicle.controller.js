@@ -190,10 +190,15 @@ const getAllRoutes = async (req, res) => {
         connection = await createConnection();
 
         const [routes] = await connection.execute(`
-            SELECT route_from, route_to, COUNT(*) as vehicle_count
+            SELECT route_from, route_to,
+                   COUNT(*) as vehicle_count,
+                   MIN(price) as min_price,
+                   MAX(price) as max_price,
+                   GROUP_CONCAT(DISTINCT vehicle_type ORDER BY vehicle_type SEPARATOR ', ') as vehicle_types
             FROM vehicles
             WHERE status = 'approved'
             GROUP BY route_from, route_to
+            ORDER BY route_from ASC
         `);
 
         res.json(routes);
@@ -204,7 +209,7 @@ const getAllRoutes = async (req, res) => {
     } finally {
         if (connection) await connection.end();
     }
-};
+};;
 
 // ================= SEARCH TRIPS =================
 const searchTrips = async (req, res) => {
