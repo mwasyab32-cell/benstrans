@@ -440,6 +440,18 @@
             })();
         }
         
+        // Add a new time slot input
+        function addTimeSlot() {
+            const timeSlots = document.getElementById('timeSlots');
+            const div = document.createElement('div');
+            div.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px;';
+            div.innerHTML = `
+                <input type="time" name="times">
+                <button type="button" onclick="this.parentElement.remove()" class="btn" style="background:#dc3545;">Remove</button>
+            `;
+            timeSlots.appendChild(div);
+        }
+
         // Update registration fee display
         function updateRegistrationFee() {
             const vehicleType = document.getElementById('vehicle_type').value;

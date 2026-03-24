@@ -215,7 +215,8 @@ const searchTrips = async (req, res) => {
             return res.status(400).json({ error: 'from, to, and date are required' });
         }
         connection = await createConnection();
-        const [trips] = await connection.execute(`
+
+        let [trips] = await connection.execute(`
             SELECT t.*, v.vehicle_number, v.route_from, v.route_to, v.price, v.vehicle_type,
                    (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
             FROM trips t
@@ -225,6 +226,22 @@ const searchTrips = async (req, res) => {
             GROUP BY t.id
             HAVING remaining_seats > 0
         `, [`%${from}%`, `%${to}%`, date]);
+
+        // If no trips found, auto-generate from schedules and retry
+        if (trips.length === 0) {
+            await autoGenerateTrips(connection, 14);
+            [trips] = await connection.execute(`
+                SELECT t.*, v.vehicle_number, v.route_from, v.route_to, v.price, v.vehicle_type,
+                       (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
+                FROM trips t
+                JOIN vehicles v ON t.vehicle_id = v.id
+                LEFT JOIN bookings b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
+                WHERE v.route_from LIKE ? AND v.route_to LIKE ? AND DATE(t.travel_date) = ? AND v.status = 'approved'
+                GROUP BY t.id
+                HAVING remaining_seats > 0
+            `, [`%${from}%`, `%${to}%`, date]);
+        }
+
         res.json(trips);
     } catch (error) {
         console.error('SEARCH TRIPS ERROR:', error);
@@ -243,7 +260,8 @@ const searchTripsFlexible = async (req, res) => {
             return res.status(400).json({ error: 'from and to are required' });
         }
         connection = await createConnection();
-        const [trips] = await connection.execute(`
+
+        let [trips] = await connection.execute(`
             SELECT t.*, v.vehicle_number, v.route_from, v.route_to, v.price, v.vehicle_type,
                    (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
             FROM trips t
@@ -254,6 +272,23 @@ const searchTripsFlexible = async (req, res) => {
             HAVING remaining_seats > 0
             ORDER BY t.travel_date ASC
         `, [`%${from}%`, `%${to}%`]);
+
+        // Auto-generate trips from schedules if none exist
+        if (trips.length === 0) {
+            await autoGenerateTrips(connection, 14);
+            [trips] = await connection.execute(`
+                SELECT t.*, v.vehicle_number, v.route_from, v.route_to, v.price, v.vehicle_type,
+                       (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
+                FROM trips t
+                JOIN vehicles v ON t.vehicle_id = v.id
+                LEFT JOIN bookings b ON t.id = b.trip_id AND b.payment_status IN ('paid', 'pending')
+                WHERE v.route_from LIKE ? AND v.route_to LIKE ? AND v.status = 'approved' AND t.travel_date >= CURDATE()
+                GROUP BY t.id
+                HAVING remaining_seats > 0
+                ORDER BY t.travel_date ASC
+            `, [`%${from}%`, `%${to}%`]);
+        }
+
         res.json(trips);
     } catch (error) {
         console.error('SEARCH TRIPS FLEXIBLE ERROR:', error);
@@ -426,6 +461,39 @@ const generateTripsFromSchedule = async (req, res) => {
         if (connection) await connection.end();
     }
 };
+
+// ================= HELPER: AUTO-GENERATE TRIPS FROM SCHEDULES =================
+async function autoGenerateTrips(connection, daysAhead = 14) {
+    try {
+        const [schedules] = await connection.execute(`
+            SELECT vs.*, v.total_seats FROM vehicle_schedules vs
+            JOIN vehicles v ON vs.vehicle_id = v.id
+            WHERE v.status = 'approved'
+        `);
+        const today = new Date();
+        for (const schedule of schedules) {
+            for (let i = 0; i < daysAhead; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                if (date.getDay() == schedule.day_of_week) {
+                    const travelDate = date.toISOString().split('T')[0];
+                    const [existing] = await connection.execute(
+                        'SELECT id FROM trips WHERE vehicle_id=? AND travel_date=? AND departure_time=?',
+                        [schedule.vehicle_id, travelDate, schedule.departure_time]
+                    );
+                    if (existing.length === 0) {
+                        await connection.execute(
+                            'INSERT INTO trips (vehicle_id, travel_date, departure_time, available_seats) VALUES (?,?,?,?)',
+                            [schedule.vehicle_id, travelDate, schedule.departure_time, schedule.total_seats]
+                        );
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Auto-generate trips error:', err.message);
+    }
+}
 
 module.exports = {
     registerVehicle,
