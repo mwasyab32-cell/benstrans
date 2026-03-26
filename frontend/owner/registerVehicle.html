@@ -209,7 +209,7 @@
                     return;
                 }
                 
-                let html = '<table class="table"><tr><th>Type</th><th>Vehicle</th><th>Route</th><th>Seats</th><th>Price</th><th>Reg. Fee</th><th>Status</th><th>Date</th></tr>';
+                let html = '<table class="table"><tr><th>Type</th><th>Vehicle</th><th>Route</th><th>Seats</th><th>Price</th><th>Reg. Fee</th><th>Status</th><th>Registered On</th></tr>';
                 let approvedVehicles = [];
                 let pendingCount = 0;
                 
@@ -217,6 +217,9 @@
                     if (vehicle.status === 'pending') pendingCount++;
                     const statusBadge = vehicle.status === 'approved' ? 'badge-success' : vehicle.status === 'rejected' ? 'badge-danger' : 'badge-warning';
                     const statusText = vehicle.status === 'approved' ? 'ACTIVE' : vehicle.status === 'pending' ? 'PENDING' : vehicle.status.toUpperCase();
+                    const registeredDate = vehicle.created_at
+                        ? new Date(vehicle.created_at).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : 'N/A';
                     html += `
                         <tr ${vehicle.status === 'pending' ? 'style="background-color: #fff3cd;"' : ''}>
                             <td><span class="badge ${vehicle.vehicle_type === 'bus' ? 'badge-primary' : 'badge-secondary'}">${vehicle.vehicle_type}</span></td>
@@ -226,7 +229,7 @@
                             <td>KSh ${vehicle.price}</td>
                             <td>KSh ${vehicle.registration_fee || 0}</td>
                             <td><span class="badge ${statusBadge}">${statusText}</span></td>
-                            <td>${vehicle.registration_date || 'N/A'}</td>
+                            <td>${registeredDate}</td>
                         </tr>
                     `;
                     

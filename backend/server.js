@@ -9,6 +9,8 @@ const bookingRoutes = require('./routes/booking.routes');
 const adminRoutes = require('./routes/admin.routes');
 const contactRoutes = require('./routes/contact.routes');
 const messageRoutes = require('./routes/message.routes');
+const paymentRoutes = require('./routes/payment.routes');
+const smsRoutes = require('./routes/sms.routes');
 const { createConnection } = require('./config/db');
 
 const app = express();
@@ -27,6 +29,8 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/sms', smsRoutes);
 
 // Fallback route to serve frontend (for SPA)
 app.get('*', (req, res) => {

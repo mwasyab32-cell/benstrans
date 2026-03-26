@@ -79,6 +79,7 @@
         .btn-primary { background: #667eea; color: white; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-secondary { background: #6c757d; color: white; }
+        .btn-message { background: #28a745; color: white; }
         
         .btn:hover { opacity: 0.9; }
         
@@ -135,12 +136,37 @@
             <h1>My Vehicles</h1>
             <div>
                 <a href="registerVehicle.html" class="btn btn-primary">+ Register New Vehicle</a>
+                <button class="btn btn-message" onclick="toggleChat()" id="chatToggleBtn">💬 Message Admin <span id="unreadBadge" style="display:none; background:#dc3545; color:white; border-radius:50%; padding:1px 6px; font-size:11px; margin-left:4px;"></span></button>
                 <a href="../index.html" class="btn btn-secondary">Back to Home</a>
             </div>
         </div>
-        
+
         <div id="vehiclesList" class="vehicles-grid">
             <p>Loading vehicles...</p>
+        </div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div id="chatPanel" style="display:none; position:fixed; bottom:20px; right:20px; width:360px; max-height:520px;
+         background:white; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.2); z-index:2000; flex-direction:column;">
+        <div style="background:linear-gradient(135deg,#667eea,#764ba2); color:white; padding:15px 20px; border-radius:12px 12px 0 0;
+             display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <strong>💬 Message Admin</strong>
+                <div id="chatAdminName" style="font-size:12px; opacity:0.85;"></div>
+            </div>
+            <button onclick="toggleChat()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">✕</button>
+        </div>
+        <div id="chatMessages" style="flex:1; overflow-y:auto; padding:15px; min-height:280px; max-height:320px; background:#f8f9fa;"></div>
+        <div style="padding:12px; border-top:1px solid #eee; background:white; border-radius:0 0 12px 12px;">
+            <input type="text" id="chatSubject" placeholder="Subject (optional)"
+                style="width:100%; padding:7px 10px; border:1px solid #ddd; border-radius:6px; margin-bottom:8px; box-sizing:border-box; font-size:13px;">
+            <div style="display:flex; gap:8px;">
+                <textarea id="chatInput" placeholder="Type your message..." rows="2"
+                    style="flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:6px; resize:none; font-size:13px;"></textarea>
+                <button onclick="sendChatMessage()" style="background:linear-gradient(135deg,#667eea,#764ba2); color:white;
+                    border:none; border-radius:6px; padding:0 16px; cursor:pointer; font-size:18px;">➤</button>
+            </div>
         </div>
     </div>
 
@@ -338,6 +364,137 @@
 
         // Load vehicles on page load
         loadVehicles();
+    </script>
+
+    <script>
+        // ===== CHAT WITH ADMIN =====
+        const CHAT_API = 'https://benstrans.onrender.com/api';
+        let adminId = null;
+        let chatOpen = false;
+        let pollInterval = null;
+
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+
+        function authHeaders() {
+            return { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' };
+        }
+
+        async function initChat() {
+            try {
+                const res = await fetch(`${CHAT_API}/messages/admins`, { headers: authHeaders() });
+                const admins = await res.json();
+                if (admins.length === 0) return;
+                adminId = admins[0].id;
+                document.getElementById('chatAdminName').textContent = admins[0].name;
+                checkUnread();
+            } catch (e) { console.error('Chat init error', e); }
+        }
+
+        async function checkUnread() {
+            try {
+                const res = await fetch(`${CHAT_API}/messages/unread-count`, { headers: authHeaders() });
+                const data = await res.json();
+                const badge = document.getElementById('unreadBadge');
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (e) {}
+        }
+
+        async function toggleChat() {
+            const panel = document.getElementById('chatPanel');
+            chatOpen = !chatOpen;
+            panel.style.display = chatOpen ? 'flex' : 'none';
+            if (chatOpen) {
+                await loadChatMessages();
+                if (!pollInterval) {
+                    pollInterval = setInterval(loadChatMessages, 5000);
+                }
+            } else {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+
+        async function loadChatMessages() {
+            if (!adminId) return;
+            try {
+                const res = await fetch(`${CHAT_API}/messages/conversation/${adminId}`, { headers: authHeaders() });
+                const messages = await res.json();
+                const container = document.getElementById('chatMessages');
+                const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+                if (!Array.isArray(messages) || messages.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; color:#999; font-size:13px; margin-top:40px;">No messages yet. Say hello!</p>';
+                    return;
+                }
+
+                container.innerHTML = messages.map(m => {
+                    const isMe = m.sender_id === currentUser.id;
+                    const time = new Date(m.created_at).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' });
+                    const date = new Date(m.created_at).toLocaleDateString('en-KE', { day: '2-digit', month: 'short' });
+                    return `
+                        <div style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; margin-bottom:10px;">
+                            <div style="max-width:75%; background:${isMe ? 'linear-gradient(135deg,#667eea,#764ba2)' : 'white'};
+                                color:${isMe ? 'white' : '#333'}; padding:9px 13px; border-radius:${isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px'};
+                                box-shadow:0 1px 4px rgba(0,0,0,0.1); font-size:13px;">
+                                ${m.subject && m.subject !== 'No Subject' ? `<div style="font-size:11px; opacity:0.75; margin-bottom:3px;">${m.subject}</div>` : ''}
+                                <div>${m.message}</div>
+                                <div style="font-size:10px; opacity:0.65; margin-top:4px; text-align:right;">${date} ${time}</div>
+                            </div>
+                        </div>`;
+                }).join('');
+
+                container.scrollTop = container.scrollHeight;
+                document.getElementById('unreadBadge').style.display = 'none';
+            } catch (e) { console.error('Load messages error', e); }
+        }
+
+        async function sendChatMessage() {
+            if (!adminId) { alert('No admin found to message.'); return; }
+            const input = document.getElementById('chatInput');
+            const subjectInput = document.getElementById('chatSubject');
+            const message = input.value.trim();
+            if (!message) return;
+
+            try {
+                const res = await fetch(`${CHAT_API}/messages/send`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        receiver_id: adminId,
+                        subject: subjectInput.value.trim() || 'No Subject',
+                        message
+                    })
+                });
+                if (res.ok) {
+                    input.value = '';
+                    subjectInput.value = '';
+                    await loadChatMessages();
+                } else {
+                    const err = await res.json();
+                    alert('Failed to send: ' + err.error);
+                }
+            } catch (e) { alert('Send failed. Please try again.'); }
+        }
+
+        // Send on Enter (Shift+Enter for newline)
+        document.getElementById('chatInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        });
+
+        // Init chat on load
+        initChat();
+        // Poll unread count every 30s
+        setInterval(checkUnread, 30000);
     </script>
 </body>
 </html>
