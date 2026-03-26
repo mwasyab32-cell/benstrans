@@ -130,6 +130,158 @@
     
     <script src="../js/auth.js"></script>
     <script src="../js/chatbox.js"></script>
+
+    <!-- Floating Chat Button -->
+    <button onclick="toggleOwnerChat()" id="chatFloatBtn"
+        style="position:fixed; bottom:24px; right:24px; z-index:1999;
+               background:linear-gradient(135deg,#667eea,#764ba2); color:white;
+               border:none; border-radius:50px; padding:14px 22px; font-size:15px;
+               cursor:pointer; box-shadow:0 4px 15px rgba(102,126,234,0.5);
+               display:flex; align-items:center; gap:8px;">
+        💬 Message Admin
+        <span id="chatUnreadBadge" style="display:none; background:#dc3545; color:white;
+              border-radius:50%; padding:1px 7px; font-size:11px;"></span>
+    </button>
+
+    <!-- Chat Panel -->
+    <div id="ownerChatPanel" style="display:none; position:fixed; bottom:80px; right:24px; width:360px;
+         background:white; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.25);
+         z-index:2000; flex-direction:column; overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#667eea,#764ba2); color:white;
+                    padding:15px 20px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-weight:bold; font-size:15px;">💬 Message Admin</div>
+                <div id="ownerChatAdminName" style="font-size:12px; opacity:0.85;"></div>
+            </div>
+            <button onclick="toggleOwnerChat()" style="background:none; border:none; color:white; font-size:22px; cursor:pointer; line-height:1;">✕</button>
+        </div>
+        <div id="ownerChatMessages" style="overflow-y:auto; padding:15px; height:300px; background:#f8f9fa;"></div>
+        <div style="padding:12px; border-top:1px solid #eee; background:white;">
+            <input type="text" id="ownerChatSubject" placeholder="Subject (optional)"
+                style="width:100%; padding:7px 10px; border:1px solid #ddd; border-radius:6px;
+                       margin-bottom:8px; box-sizing:border-box; font-size:13px;">
+            <div style="display:flex; gap:8px;">
+                <textarea id="ownerChatInput" placeholder="Type your message... (Enter to send)" rows="2"
+                    style="flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:6px;
+                           resize:none; font-size:13px; box-sizing:border-box;"></textarea>
+                <button onclick="sendOwnerMessage()"
+                    style="background:linear-gradient(135deg,#667eea,#764ba2); color:white;
+                           border:none; border-radius:6px; padding:0 16px; cursor:pointer; font-size:20px;">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const OWNER_CHAT_API = 'https://benstrans.onrender.com/api';
+        let ownerAdminId = null;
+        let ownerChatOpen = false;
+        let ownerPollInterval = null;
+
+        function ownerAuthHeaders() {
+            return { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' };
+        }
+
+        async function initOwnerChat() {
+            try {
+                const res = await fetch(`${OWNER_CHAT_API}/messages/admins`, { headers: ownerAuthHeaders() });
+                const admins = await res.json();
+                if (!Array.isArray(admins) || admins.length === 0) return;
+                ownerAdminId = admins[0].id;
+                document.getElementById('ownerChatAdminName').textContent = admins[0].name;
+                checkOwnerUnread();
+            } catch (e) {}
+        }
+
+        async function checkOwnerUnread() {
+            try {
+                const res = await fetch(`${OWNER_CHAT_API}/messages/unread-count`, { headers: ownerAuthHeaders() });
+                const data = await res.json();
+                const badge = document.getElementById('chatUnreadBadge');
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (e) {}
+        }
+
+        async function toggleOwnerChat() {
+            const panel = document.getElementById('ownerChatPanel');
+            ownerChatOpen = !ownerChatOpen;
+            panel.style.display = ownerChatOpen ? 'flex' : 'none';
+            if (ownerChatOpen) {
+                await loadOwnerMessages();
+                if (!ownerPollInterval) ownerPollInterval = setInterval(loadOwnerMessages, 5000);
+            } else {
+                clearInterval(ownerPollInterval);
+                ownerPollInterval = null;
+            }
+        }
+
+        async function loadOwnerMessages() {
+            if (!ownerAdminId) return;
+            try {
+                const res = await fetch(`${OWNER_CHAT_API}/messages/conversation/${ownerAdminId}`, { headers: ownerAuthHeaders() });
+                const messages = await res.json();
+                const container = document.getElementById('ownerChatMessages');
+                const me = JSON.parse(localStorage.getItem('user') || '{}');
+
+                if (!Array.isArray(messages) || messages.length === 0) {
+                    container.innerHTML = '<p style="text-align:center;color:#999;font-size:13px;margin-top:40px;">No messages yet. Say hello!</p>';
+                    return;
+                }
+
+                container.innerHTML = messages.map(m => {
+                    const isMe = m.sender_id === me.id;
+                    const time = new Date(m.created_at).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' });
+                    const date = new Date(m.created_at).toLocaleDateString('en-KE', { day: '2-digit', month: 'short' });
+                    return `<div style="display:flex;justify-content:${isMe ? 'flex-end' : 'flex-start'};margin-bottom:10px;">
+                        <div style="max-width:75%;background:${isMe ? 'linear-gradient(135deg,#667eea,#764ba2)' : 'white'};
+                            color:${isMe ? 'white' : '#333'};padding:9px 13px;
+                            border-radius:${isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px'};
+                            box-shadow:0 1px 4px rgba(0,0,0,0.1);font-size:13px;">
+                            ${m.subject && m.subject !== 'No Subject' ? `<div style="font-size:11px;opacity:0.75;margin-bottom:3px;">${m.subject}</div>` : ''}
+                            <div>${m.message}</div>
+                            <div style="font-size:10px;opacity:0.65;margin-top:4px;text-align:right;">${date} ${time}</div>
+                        </div></div>`;
+                }).join('');
+                container.scrollTop = container.scrollHeight;
+                document.getElementById('chatUnreadBadge').style.display = 'none';
+            } catch (e) {}
+        }
+
+        async function sendOwnerMessage() {
+            if (!ownerAdminId) { alert('No admin available.'); return; }
+            const input = document.getElementById('ownerChatInput');
+            const subject = document.getElementById('ownerChatSubject');
+            const message = input.value.trim();
+            if (!message) return;
+
+            try {
+                const res = await fetch(`${OWNER_CHAT_API}/messages/send`, {
+                    method: 'POST',
+                    headers: ownerAuthHeaders(),
+                    body: JSON.stringify({ receiver_id: ownerAdminId, subject: subject.value.trim() || 'No Subject', message })
+                });
+                if (res.ok) {
+                    input.value = '';
+                    subject.value = '';
+                    await loadOwnerMessages();
+                } else {
+                    const err = await res.json();
+                    alert('Failed: ' + err.error);
+                }
+            } catch (e) { alert('Send failed. Try again.'); }
+        }
+
+        document.getElementById('ownerChatInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendOwnerMessage(); }
+        });
+
+        initOwnerChat();
+        setInterval(checkOwnerUnread, 30000);
+    </script>
     <script>
         // Check if user is owner and approved
         const user = JSON.parse(localStorage.getItem('user') || '{}');

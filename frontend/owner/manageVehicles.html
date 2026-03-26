@@ -136,7 +136,6 @@
             <h1>My Vehicles</h1>
             <div>
                 <a href="registerVehicle.html" class="btn btn-primary">+ Register New Vehicle</a>
-                <button class="btn btn-message" onclick="toggleChat()" id="chatToggleBtn">💬 Message Admin <span id="unreadBadge" style="display:none; background:#dc3545; color:white; border-radius:50%; padding:1px 6px; font-size:11px; margin-left:4px;"></span></button>
                 <a href="../index.html" class="btn btn-secondary">Back to Home</a>
             </div>
         </div>
@@ -146,26 +145,42 @@
         </div>
     </div>
 
+    <!-- Floating Chat Button -->
+    <button onclick="toggleChat()" id="chatFloatBtn"
+        style="position:fixed; bottom:24px; right:24px; z-index:1999;
+               background:linear-gradient(135deg,#667eea,#764ba2); color:white;
+               border:none; border-radius:50px; padding:14px 22px; font-size:15px;
+               cursor:pointer; box-shadow:0 4px 15px rgba(102,126,234,0.5);
+               display:flex; align-items:center; gap:8px;">
+        💬 Message Admin
+        <span id="unreadBadge" style="display:none; background:#dc3545; color:white;
+              border-radius:50%; padding:1px 7px; font-size:11px;"></span>
+    </button>
+
     <!-- Chat Panel -->
-    <div id="chatPanel" style="display:none; position:fixed; bottom:20px; right:20px; width:360px; max-height:520px;
-         background:white; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.2); z-index:2000; flex-direction:column;">
-        <div style="background:linear-gradient(135deg,#667eea,#764ba2); color:white; padding:15px 20px; border-radius:12px 12px 0 0;
-             display:flex; justify-content:space-between; align-items:center;">
+    <div id="chatPanel" style="display:none; position:fixed; bottom:80px; right:24px; width:360px;
+         background:white; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.25);
+         z-index:2000; flex-direction:column; overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#667eea,#764ba2); color:white;
+                    padding:15px 20px; display:flex; justify-content:space-between; align-items:center;">
             <div>
-                <strong>💬 Message Admin</strong>
+                <div style="font-weight:bold; font-size:15px;">💬 Message Admin</div>
                 <div id="chatAdminName" style="font-size:12px; opacity:0.85;"></div>
             </div>
-            <button onclick="toggleChat()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">✕</button>
+            <button onclick="toggleChat()" style="background:none; border:none; color:white; font-size:22px; cursor:pointer; line-height:1;">✕</button>
         </div>
-        <div id="chatMessages" style="flex:1; overflow-y:auto; padding:15px; min-height:280px; max-height:320px; background:#f8f9fa;"></div>
-        <div style="padding:12px; border-top:1px solid #eee; background:white; border-radius:0 0 12px 12px;">
+        <div id="chatMessages" style="overflow-y:auto; padding:15px; height:300px; background:#f8f9fa;"></div>
+        <div style="padding:12px; border-top:1px solid #eee; background:white;">
             <input type="text" id="chatSubject" placeholder="Subject (optional)"
-                style="width:100%; padding:7px 10px; border:1px solid #ddd; border-radius:6px; margin-bottom:8px; box-sizing:border-box; font-size:13px;">
+                style="width:100%; padding:7px 10px; border:1px solid #ddd; border-radius:6px;
+                       margin-bottom:8px; box-sizing:border-box; font-size:13px;">
             <div style="display:flex; gap:8px;">
-                <textarea id="chatInput" placeholder="Type your message..." rows="2"
-                    style="flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:6px; resize:none; font-size:13px;"></textarea>
-                <button onclick="sendChatMessage()" style="background:linear-gradient(135deg,#667eea,#764ba2); color:white;
-                    border:none; border-radius:6px; padding:0 16px; cursor:pointer; font-size:18px;">➤</button>
+                <textarea id="chatInput" placeholder="Type your message... (Enter to send)" rows="2"
+                    style="flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:6px;
+                           resize:none; font-size:13px; box-sizing:border-box;"></textarea>
+                <button onclick="sendChatMessage()"
+                    style="background:linear-gradient(135deg,#667eea,#764ba2); color:white;
+                           border:none; border-radius:6px; padding:0 16px; cursor:pointer; font-size:20px;">➤</button>
             </div>
         </div>
     </div>
