@@ -93,8 +93,8 @@ const replyToContact = async (req, res) => {
         
         // Update with reply
         await connection.execute(
-            'UPDATE contacts SET admin_reply = ?, replied_at = NOW(), replied_by = ?, status = ? WHERE id = ?',
-            [reply, adminId, 'responded', id]
+            'UPDATE contacts SET admin_reply = ?, replied_at = NOW(), status = ? WHERE id = ?',
+            [reply, 'responded', id]
         );
         
         await connection.end();

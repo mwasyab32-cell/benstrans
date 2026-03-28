@@ -93,6 +93,10 @@
                     <div class="contact-form-section">
                         <div class="card">
                             <h2>Send Us a Message</h2>
+                            <p style="text-align:center; margin-bottom:15px;">
+                                Already sent a message? 
+                                <a href="check-messages.html" style="color:#4a90e2; font-weight:600;">Check for replies →</a>
+                            </p>
                             <form id="contactForm">
                                 <div class="form-group">
                                     <label for="name">Full Name *</label>
@@ -246,7 +250,11 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showMessage('✅ Thank you for your message! We will get back to you soon.', 'success');
+                    showMessage(`✅ Thank you for your message! We will get back to you soon.<br><br>
+                        <a href="check-messages.html?email=${encodeURIComponent(formData.email)}" 
+                           style="color:#155724; font-weight:bold; text-decoration:underline;">
+                           📬 Click here to check for admin replies
+                        </a>`, 'success');
                     document.getElementById('contactForm').reset();
                 } else {
                     showMessage('❌ ' + (data.error || 'Failed to send message. Please try again.'), 'error');
