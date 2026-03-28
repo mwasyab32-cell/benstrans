@@ -192,8 +192,9 @@ const getAdmins = async (req, res) => {
     try {
         const connection = await createConnection();
         
+        // Find admins regardless of status — admin accounts may not be 'approved' in all setups
         const [admins] = await connection.execute(
-            'SELECT id, name, email FROM users WHERE role = "admin" AND status = "approved"'
+            "SELECT id, name, email FROM users WHERE role = 'admin'"
         );
         
         await connection.end();

@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const authRoutes = require('./routes/auth.routes');
 const vehicleRoutes = require('./routes/vehicle.routes');
@@ -48,7 +49,7 @@ async function initDatabase() {
                 name VARCHAR(100) NOT NULL,
                 email VARCHAR(100) UNIQUE NOT NULL,
                 phone VARCHAR(20) NOT NULL,
-                id_number VARCHAR(20) NOT NULL,
+                id_number VARCHAR(20) DEFAULT '',
                 password VARCHAR(255) NOT NULL,
                 role ENUM('admin','owner','client') DEFAULT 'client',
                 status ENUM('pending','approved','rejected') DEFAULT 'pending',
@@ -118,12 +119,44 @@ async function initDatabase() {
                 client_replied_at TIMESTAMP NULL,
                 status ENUM('new','read','responded') DEFAULT 'new',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS messages (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                sender_id INT NOT NULL,
+                receiver_id INT NOT NULL,
+                subject VARCHAR(255) DEFAULT 'No Subject',
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+            )`,
+            `CREATE TABLE IF NOT EXISTS conversations (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                owner_id INT NOT NULL,
+                admin_id INT NOT NULL,
+                last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_conversation (owner_id, admin_id)
             )`
         ];
         for (const sql of tables) {
             await connection.execute(sql);
         }
         console.log('✅ Database tables initialized');
+
+        // Auto-create admin if none exists
+        const [admins] = await connection.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
+        if (admins.length === 0) {
+            const hashedPassword = await bcrypt.hash('admin123', 10);
+            await connection.execute(
+                "INSERT INTO users (name, email, phone, id_number, password, role, status) VALUES (?, ?, ?, ?, ?, 'admin', 'approved')",
+                ['Admin', 'admin@benstrans.com', '0700000000', '00000000', hashedPassword]
+            );
+            console.log('✅ Default admin created — email: admin@benstrans.com | password: admin123');
+        }
     } catch (err) {
         console.error('⚠️ DB init error:', err.message);
     } finally {
