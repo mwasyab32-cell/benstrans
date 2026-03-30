@@ -5,6 +5,7 @@ const {
     createDailySchedule,
     generateTripsFromSchedule,
     getMyTrips,
+    createTrip,
     updateTrip,
     deleteTrip,
     searchTrips,
@@ -29,9 +30,10 @@ router.get('/trips/search-flexible', searchTripsFlexible);
 router.post('/register', authenticateToken, checkRole(['owner']), registerVehicle);
 router.get('/my-vehicles', authenticateToken, checkRole(['owner']), getMyVehicles);
 router.get('/my-trips', authenticateToken, checkRole(['owner']), getMyTrips);
-router.post('/schedule', authenticateToken, checkRole(['owner']), createDailySchedule);
+router.post('/trips', authenticateToken, checkRole(['owner']), createTrip);
 router.put('/trips/:id', authenticateToken, checkRole(['owner']), updateTrip);
 router.delete('/trips/:id', authenticateToken, checkRole(['owner']), deleteTrip);
+router.post('/schedule', authenticateToken, checkRole(['owner']), createDailySchedule);
 
 // Admin routes
 router.post('/generate-trips', authenticateToken, checkRole(['admin']), generateTripsFromSchedule);

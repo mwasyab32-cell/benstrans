@@ -78,7 +78,8 @@
     <div class="page-header">
         <h1>🗓 Manage My Trips</h1>
         <div style="display:flex; gap:10px;">
-            <a href="registerVehicle.html" class="btn btn-primary">+ Add Schedule</a>
+            <button class="btn btn-primary" onclick="openCreateModal()">+ Create Trip</button>
+            <a href="registerVehicle.html" class="btn btn-secondary">+ Add Schedule</a>
             <a href="manageVehicles.html" class="btn btn-secondary">My Vehicles</a>
         </div>
     </div>
@@ -113,6 +114,38 @@
     <div id="summary" style="margin-bottom:14px; color:#555; font-size:14px;"></div>
 
     <div id="tripsTable"></div>
+</div>
+
+<!-- Create Trip Modal -->
+<div class="modal-overlay" id="createModal">
+    <div class="modal">
+        <h2>+ Create New Trip</h2>
+        <form id="createForm">
+            <div class="form-group">
+                <label>Vehicle</label>
+                <select id="createVehicle" required
+                    style="width:100%; padding:9px 11px; border:1px solid #ddd; border-radius:6px; font-size:14px; box-sizing:border-box;">
+                    <option value="">Select a vehicle...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Travel Date</label>
+                <input type="date" id="createDate" required>
+            </div>
+            <div class="form-group">
+                <label>Departure Time</label>
+                <input type="time" id="createTime" required>
+            </div>
+            <div class="form-group">
+                <label>Available Seats <span id="createSeatsHint" style="color:#888; font-weight:400;"></span></label>
+                <input type="number" id="createSeats" min="1" required>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Create Trip</button>
+                <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Edit Modal -->
@@ -299,6 +332,83 @@
     // Close modal on overlay click
     document.getElementById('editModal').addEventListener('click', (e) => {
         if (e.target === document.getElementById('editModal')) closeModal();
+    });
+    document.getElementById('createModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('createModal')) closeCreateModal();
+    });
+
+    async function openCreateModal() {
+        // Load owner's vehicles into the select
+        const sel = document.getElementById('createVehicle');
+        sel.innerHTML = '<option value="">Loading vehicles...</option>';
+        try {
+            const res = await fetch(`${API_BASE}/vehicles/my-vehicles`, { headers: headers() });
+            const vehicles = await res.json();
+            const approved = vehicles.filter(v => v.status === 'approved');
+            if (approved.length === 0) {
+                alert('You have no approved vehicles. Register and get a vehicle approved first.');
+                return;
+            }
+            sel.innerHTML = '<option value="">Select a vehicle...</option>' +
+                approved.map(v =>
+                    `<option value="${v.id}" data-seats="${v.total_seats}">${v.vehicle_number} — ${v.route_from} → ${v.route_to} (${v.total_seats} seats)</option>`
+                ).join('');
+        } catch (e) {
+            sel.innerHTML = '<option value="">Failed to load vehicles</option>';
+        }
+
+        // Set min date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('createDate').min = today;
+        document.getElementById('createDate').value = today;
+
+        document.getElementById('createModal').classList.add('active');
+    }
+
+    function closeCreateModal() {
+        document.getElementById('createModal').classList.remove('active');
+        document.getElementById('createForm').reset();
+    }
+
+    // Update seats hint when vehicle changes
+    document.getElementById('createVehicle').addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        const max = opt.dataset.seats;
+        const hint = document.getElementById('createSeatsHint');
+        const seatsInput = document.getElementById('createSeats');
+        if (max) {
+            hint.textContent = `(max ${max})`;
+            seatsInput.max = max;
+            seatsInput.value = max;
+        } else {
+            hint.textContent = '';
+            seatsInput.removeAttribute('max');
+        }
+    });
+
+    document.getElementById('createForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true; btn.textContent = 'Creating...';
+        const data = {
+            vehicle_id: parseInt(document.getElementById('createVehicle').value),
+            travel_date: document.getElementById('createDate').value,
+            departure_time: document.getElementById('createTime').value,
+            available_seats: parseInt(document.getElementById('createSeats').value)
+        };
+        try {
+            const res = await fetch(`${API_BASE}/vehicles/trips`, {
+                method: 'POST', headers: headers(), body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error);
+            closeCreateModal();
+            loadTrips();
+        } catch (err) {
+            alert('❌ ' + err.message);
+        } finally {
+            btn.disabled = false; btn.textContent = 'Create Trip';
+        }
     });
 
     loadTrips();

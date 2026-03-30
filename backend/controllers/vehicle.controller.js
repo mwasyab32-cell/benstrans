@@ -467,6 +467,51 @@ const generateTripsFromSchedule = async (req, res) => {
     }
 };
 
+// ================= CREATE TRIP (MANUAL) =================
+const createTrip = async (req, res) => {
+    let connection;
+    try {
+        const { vehicle_id, travel_date, departure_time, available_seats } = req.body;
+        const owner_id = req.user.id;
+
+        if (!vehicle_id || !travel_date || !departure_time || !available_seats) {
+            return res.status(400).json({ error: 'vehicle_id, travel_date, departure_time and available_seats are required' });
+        }
+
+        connection = await createConnection();
+
+        // Verify vehicle belongs to this owner and is approved
+        const [vehicles] = await connection.execute(
+            "SELECT id, total_seats FROM vehicles WHERE id = ? AND owner_id = ? AND status = 'approved'",
+            [vehicle_id, owner_id]
+        );
+        if (vehicles.length === 0) return res.status(404).json({ error: 'Vehicle not found or not approved' });
+
+        if (available_seats > vehicles[0].total_seats) {
+            return res.status(400).json({ error: `Available seats cannot exceed vehicle capacity (${vehicles[0].total_seats})` });
+        }
+
+        // Prevent duplicate trips
+        const [existing] = await connection.execute(
+            'SELECT id FROM trips WHERE vehicle_id = ? AND travel_date = ? AND departure_time = ?',
+            [vehicle_id, travel_date, departure_time]
+        );
+        if (existing.length > 0) return res.status(400).json({ error: 'A trip already exists for this vehicle, date and time' });
+
+        const [result] = await connection.execute(
+            'INSERT INTO trips (vehicle_id, travel_date, departure_time, available_seats) VALUES (?, ?, ?, ?)',
+            [vehicle_id, travel_date, departure_time, available_seats]
+        );
+
+        res.status(201).json({ message: 'Trip created successfully', tripId: result.insertId });
+    } catch (error) {
+        console.error('CREATE TRIP ERROR:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
 // ================= UPDATE TRIP =================
 const updateTrip = async (req, res) => {
     let connection;
@@ -572,6 +617,7 @@ module.exports = {
     getMyVehicles,
     createDailySchedule,
     getMyTrips,
+    createTrip,
     updateTrip,
     deleteTrip,
     getAllRoutes,
