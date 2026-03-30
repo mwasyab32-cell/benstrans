@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Trips - Bens Trans</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        body { background: #f5f7fa; }
+        .container { max-width: 1100px; margin: 40px auto; padding: 20px; }
+        .page-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 24px;
+        }
+        .page-header h1 { margin: 0; color: #2c3e50; }
+        .btn {
+            padding: 9px 18px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-warning { background: #fd7e14; color: white; }
+        .btn:hover { opacity: 0.88; }
+
+        .filters {
+            background: white; padding: 16px 20px; border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 20px;
+            display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;
+        }
+        .filters label { font-size: 12px; font-weight: 600; color: #666; display: block; margin-bottom: 4px; }
+        .filters input, .filters select {
+            padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+        }
+
+        table { width: 100%; border-collapse: collapse; background: white;
+                border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+        thead { background: linear-gradient(135deg,#667eea,#764ba2); color: white; }
+        th { padding: 13px 14px; text-align: left; font-size: 13px; font-weight: 600; }
+        td { padding: 12px 14px; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #333; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8f9ff; }
+
+        .badge {
+            padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;
+        }
+        .badge-future { background: #d4edda; color: #155724; }
+        .badge-today  { background: #cce5ff; color: #004085; }
+        .badge-past   { background: #e2e3e5; color: #383d41; }
+
+        .actions { display: flex; gap: 6px; }
+
+        /* Modal */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.45); z-index: 1000;
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white; border-radius: 12px; padding: 28px;
+            width: 420px; max-width: 95vw;
+        }
+        .modal h2 { margin: 0 0 20px; color: #2c3e50; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 13px; color: #555; }
+        .form-group input {
+            width: 100%; padding: 9px 11px; border: 1px solid #ddd;
+            border-radius: 6px; font-size: 14px; box-sizing: border-box;
+        }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .empty { text-align: center; padding: 50px; color: #999; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="page-header">
+        <h1>🗓 Manage My Trips</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="registerVehicle.html" class="btn btn-primary">+ Add Schedule</a>
+            <a href="manageVehicles.html" class="btn btn-secondary">My Vehicles</a>
+        </div>
+    </div>
+
+    <div class="filters">
+        <div>
+            <label>Filter by Vehicle</label>
+            <select id="filterVehicle" onchange="applyFilters()">
+                <option value="">All Vehicles</option>
+            </select>
+        </div>
+        <div>
+            <label>From Date</label>
+            <input type="date" id="filterFrom" onchange="applyFilters()">
+        </div>
+        <div>
+            <label>To Date</label>
+            <input type="date" id="filterTo" onchange="applyFilters()">
+        </div>
+        <div>
+            <label>Status</label>
+            <select id="filterStatus" onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="future">Upcoming</option>
+                <option value="today">Today</option>
+                <option value="past">Past</option>
+            </select>
+        </div>
+        <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+    </div>
+
+    <div id="summary" style="margin-bottom:14px; color:#555; font-size:14px;"></div>
+
+    <div id="tripsTable"></div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <h2>Edit Trip</h2>
+        <form id="editForm">
+            <input type="hidden" id="editTripId">
+            <div class="form-group">
+                <label>Travel Date</label>
+                <input type="date" id="editDate" required>
+            </div>
+            <div class="form-group">
+                <label>Departure Time</label>
+                <input type="time" id="editTime" required>
+            </div>
+            <div class="form-group">
+                <label>Available Seats</label>
+                <input type="number" id="editSeats" min="1" required>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'https://benstrans.onrender.com/api';
+    let allTrips = [];
+
+    function token() { return localStorage.getItem('token'); }
+    function headers() { return { 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' }; }
+
+    async function loadTrips() {
+        if (!token()) { window.location.href = '../login.html'; return; }
+        document.getElementById('tripsTable').innerHTML = '<p style="padding:20px;color:#666;">Loading trips...</p>';
+        try {
+            const res = await fetch(`${API_BASE}/vehicles/my-trips`, { headers: headers() });
+            if (!res.ok) throw new Error('Failed to load trips');
+            allTrips = await res.json();
+            populateVehicleFilter();
+            applyFilters();
+        } catch (e) {
+            document.getElementById('tripsTable').innerHTML = `<p style="color:red;padding:20px;">${e.message}</p>`;
+        }
+    }
+
+    function populateVehicleFilter() {
+        const sel = document.getElementById('filterVehicle');
+        const vehicles = [...new Map(allTrips.map(t => [t.vehicle_id, t.vehicle_number])).entries()];
+        vehicles.forEach(([id, num]) => {
+            const opt = document.createElement('option');
+            opt.value = id; opt.textContent = num;
+            sel.appendChild(opt);
+        });
+    }
+
+    function tripStatus(dateStr) {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const d = new Date(dateStr); d.setHours(0,0,0,0);
+        if (d < today) return 'past';
+        if (d.getTime() === today.getTime()) return 'today';
+        return 'future';
+    }
+
+    function applyFilters() {
+        const veh = document.getElementById('filterVehicle').value;
+        const from = document.getElementById('filterFrom').value;
+        const to = document.getElementById('filterTo').value;
+        const status = document.getElementById('filterStatus').value;
+
+        let filtered = allTrips.filter(t => {
+            if (veh && t.vehicle_id != veh) return false;
+            if (from && t.travel_date < from) return false;
+            if (to && t.travel_date > to) return false;
+            if (status && tripStatus(t.travel_date) !== status) return false;
+            return true;
+        });
+
+        renderTable(filtered);
+    }
+
+    function clearFilters() {
+        document.getElementById('filterVehicle').value = '';
+        document.getElementById('filterFrom').value = '';
+        document.getElementById('filterTo').value = '';
+        document.getElementById('filterStatus').value = '';
+        applyFilters();
+    }
+
+    function renderTable(trips) {
+        document.getElementById('summary').textContent = `Showing ${trips.length} trip${trips.length !== 1 ? 's' : ''}`;
+
+        if (trips.length === 0) {
+            document.getElementById('tripsTable').innerHTML =
+                '<div class="empty"><p>No trips found.</p><p>Add a schedule on the Register Vehicle page to generate trips.</p></div>';
+            return;
+        }
+
+        const rows = trips.map(t => {
+            const st = tripStatus(t.travel_date);
+            const badgeClass = st === 'future' ? 'badge-future' : st === 'today' ? 'badge-today' : 'badge-past';
+            const dateStr = new Date(t.travel_date).toLocaleDateString('en-KE', { day:'2-digit', month:'short', year:'numeric' });
+            const canEdit = st !== 'past';
+            return `<tr>
+                <td>${t.vehicle_number}</td>
+                <td>${t.route_from} → ${t.route_to}</td>
+                <td>${dateStr}</td>
+                <td>${t.departure_time}</td>
+                <td>${t.available_seats}</td>
+                <td>${t.remaining_seats ?? t.available_seats}</td>
+                <td>KSh ${t.price}</td>
+                <td><span class="badge ${badgeClass}">${st.toUpperCase()}</span></td>
+                <td>
+                    <div class="actions">
+                        ${canEdit ? `<button class="btn btn-warning" onclick="openEdit(${t.id}, '${t.travel_date}', '${t.departure_time}', ${t.available_seats})">Edit</button>` : ''}
+                        <button class="btn btn-danger" onclick="deleteTrip(${t.id})">Delete</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('tripsTable').innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Vehicle</th><th>Route</th><th>Date</th><th>Time</th>
+                        <th>Total Seats</th><th>Remaining</th><th>Price</th><th>Status</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    }
+
+    function openEdit(id, date, time, seats) {
+        document.getElementById('editTripId').value = id;
+        document.getElementById('editDate').value = date.split('T')[0];
+        document.getElementById('editTime').value = time.substring(0, 5);
+        document.getElementById('editSeats').value = seats;
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('editModal').classList.remove('active');
+    }
+
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('editTripId').value;
+        const data = {
+            travel_date: document.getElementById('editDate').value,
+            departure_time: document.getElementById('editTime').value,
+            available_seats: parseInt(document.getElementById('editSeats').value)
+        };
+        try {
+            const res = await fetch(`${API_BASE}/vehicles/trips/${id}`, {
+                method: 'PUT', headers: headers(), body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error);
+            closeModal();
+            loadTrips();
+        } catch (err) {
+            alert('❌ ' + err.message);
+        }
+    });
+
+    async function deleteTrip(id) {
+        if (!confirm('Delete this trip? This cannot be undone.\n\nNote: trips with paid bookings cannot be deleted.')) return;
+        try {
+            const res = await fetch(`${API_BASE}/vehicles/trips/${id}`, {
+                method: 'DELETE', headers: headers()
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error);
+            loadTrips();
+        } catch (err) {
+            alert('❌ ' + err.message);
+        }
+    }
+
+    // Close modal on overlay click
+    document.getElementById('editModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('editModal')) closeModal();
+    });
+
+    loadTrips();
+</script>
+</body>
+</html>

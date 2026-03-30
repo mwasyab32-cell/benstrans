@@ -467,6 +467,73 @@ const generateTripsFromSchedule = async (req, res) => {
     }
 };
 
+// ================= UPDATE TRIP =================
+const updateTrip = async (req, res) => {
+    let connection;
+    try {
+        const { id } = req.params;
+        const owner_id = req.user.id;
+        const { travel_date, departure_time, available_seats } = req.body;
+
+        connection = await createConnection();
+
+        // Verify trip belongs to this owner
+        const [trips] = await connection.execute(`
+            SELECT t.id FROM trips t
+            JOIN vehicles v ON t.vehicle_id = v.id
+            WHERE t.id = ? AND v.owner_id = ?
+        `, [id, owner_id]);
+
+        if (trips.length === 0) return res.status(404).json({ error: 'Trip not found' });
+
+        await connection.execute(
+            'UPDATE trips SET travel_date = ?, departure_time = ?, available_seats = ? WHERE id = ?',
+            [travel_date, departure_time, available_seats, id]
+        );
+
+        res.json({ message: 'Trip updated successfully' });
+    } catch (error) {
+        console.error('UPDATE TRIP ERROR:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
+// ================= DELETE TRIP =================
+const deleteTrip = async (req, res) => {
+    let connection;
+    try {
+        const { id } = req.params;
+        const owner_id = req.user.id;
+
+        connection = await createConnection();
+
+        const [trips] = await connection.execute(`
+            SELECT t.id FROM trips t
+            JOIN vehicles v ON t.vehicle_id = v.id
+            WHERE t.id = ? AND v.owner_id = ?
+        `, [id, owner_id]);
+
+        if (trips.length === 0) return res.status(404).json({ error: 'Trip not found' });
+
+        // Check for paid bookings
+        const [paid] = await connection.execute(
+            "SELECT id FROM bookings WHERE trip_id = ? AND payment_status = 'paid'",
+            [id]
+        );
+        if (paid.length > 0) return res.status(400).json({ error: 'Cannot delete trip with paid bookings' });
+
+        await connection.execute('DELETE FROM trips WHERE id = ?', [id]);
+        res.json({ message: 'Trip deleted successfully' });
+    } catch (error) {
+        console.error('DELETE TRIP ERROR:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
 // ================= HELPER: AUTO-GENERATE TRIPS FROM SCHEDULES =================
 async function autoGenerateTrips(connection, daysAhead = 14) {
     try {
@@ -505,6 +572,8 @@ module.exports = {
     getMyVehicles,
     createDailySchedule,
     getMyTrips,
+    updateTrip,
+    deleteTrip,
     getAllRoutes,
     searchTrips,
     searchTripsFlexible,
