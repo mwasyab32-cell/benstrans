@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ben's Beauty POS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>Ben's Beauty POS</h1>
+        <span class="subtitle">Skincare &amp; Cosmetics</span>
+    </div>
+    <div class="header-right">
+        <span id="user-display"></span>
+        <button id="admin-login-btn" class="btn btn-outline-white">Admin Login</button>
+        <button id="cashier-login-btn" class="btn btn-outline-white">Cashier Login</button>
+        <button id="logout-btn" class="btn btn-outline-white" style="display:none">Logout</button>
+    </div>
+</header>
+
+<div class="container">
+    <!-- Daily summary -->
+    <div class="summary-bar" style="margin-bottom:16px;">
+        <div class="summary-item">
+            <div class="value" id="summary-sales">0</div>
+            <div class="label">Today's Sales</div>
+        </div>
+        <div class="summary-item">
+            <div class="value" id="summary-revenue">KSh 0</div>
+            <div class="label">Today's Revenue</div>
+        </div>
+        <div class="summary-item">
+            <div class="value" id="summary-products">0</div>
+            <div class="label">Products in Stock</div>
+        </div>
+    </div>
+
+    <div class="layout-grid">
+        <!-- LEFT COLUMN -->
+        <div class="left-column">
+            <!-- Category + Search -->
+            <div class="top-bar">
+                <div class="category-nav" id="category-nav">
+                    <button class="category-btn active" data-cat="all">All</button>
+                    <button class="category-btn" data-cat="lotion">Lotion</button>
+                    <button class="category-btn" data-cat="shoes">Shoes</button>
+                    <button class="category-btn" data-cat="gels">Gels</button>
+                    <button class="category-btn" data-cat="wax">Wax</button>
+                    <button class="category-btn" data-cat="eye">Eye Pencil</button>
+                    <button class="category-btn" data-cat="shampoo">Shampoo</button>
+                    <button class="category-btn" data-cat="general">General</button>
+                </div>
+                <div class="search-bar">
+                    <input id="product-search" type="search" placeholder="Search products...">
+                    <button id="search-btn" class="btn btn-primary btn-sm">Search</button>
+                </div>
+            </div>
+
+            <!-- Product Form (admin only) -->
+            <div id="product-form-card" class="card" style="display:none">
+                <div class="card-header">
+                    <h2>Add / Edit Product</h2>
+                    <span class="muted" id="form-mode">New product</span>
+                </div>
+                <form id="product-form" class="form-grid">
+                    <input type="hidden" id="product-id">
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <input id="product-name" type="text" required placeholder="e.g. Nivea Lotion">
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="product-category">
+                            <option value="general">General</option>
+                            <option value="lotion">Lotion</option>
+                            <option value="shoes">Shoes</option>
+                            <option value="gels">Gels</option>
+                            <option value="wax">Wax</option>
+                            <option value="eye">Eye Pencil</option>
+                            <option value="shampoo">Shampoo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Price (KSh)</label>
+                        <input id="product-price" type="number" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <input id="product-qty" type="number" min="0" required>
+                    </div>
+                    <div class="form-group form-full">
+                        <label>Size / Variant</label>
+                        <input id="product-variant" type="text" placeholder="e.g. 200ml, Size 40">
+                    </div>
+                    <div class="form-full" style="display:flex;gap:8px;">
+                        <button type="submit" class="btn btn-primary">Save Product</button>
+                        <button type="button" id="cancel-edit-btn" class="btn btn-outline" style="display:none">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Products Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Products</h2>
+                    <span class="muted" id="products-count"></span>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Name</th><th>Category</th><th>Price</th><th>Qty</th><th>Variant</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="products-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Admin Panel -->
+            <div id="admin-panel" class="card" style="display:none">
+                <div class="card-header"><h2>User Management</h2></div>
+                <form id="create-cashier-form" class="form-grid">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input id="cashier-username" type="text" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input id="cashier-password" type="password" required>
+                    </div>
+                    <div class="form-full">
+                        <button type="submit" class="btn btn-primary">Create Cashier</button>
+                    </div>
+                </form>
+                <div style="margin-top:14px">
+                    <h3 style="font-size:0.95rem;margin-bottom:8px;color:var(--accent-dark)">Cashier Accounts</h3>
+                    <div id="cashier-list"></div>
+                </div>
+                <div style="margin-top:14px">
+                    <h3 style="font-size:0.95rem;margin-bottom:8px;color:var(--accent-dark)">Change Password</h3>
+                    <form id="change-password-form" class="form-grid">
+                        <div class="form-group">
+                            <label>User</label>
+                            <select id="change-password-user"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input id="change-password-new" type="password" required>
+                        </div>
+                        <div class="form-full">
+                            <button type="submit" class="btn btn-primary">Update Password</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <aside class="right-column">
+            <!-- Cart -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🛒 Cart</h2>
+                    <span class="muted" id="cart-count">0 items</span>
+                </div>
+                <div id="cart-list"></div>
+                <div class="cart-total">Total: KSh <span id="cart-total">0.00</span></div>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label>Payment Method</label>
+                    <select id="payment-method">
+                        <option value="cash">Cash</option>
+                        <option value="mpesa">M-Pesa</option>
+                        <option value="card">Card</option>
+                    </select>
+                </div>
+                <div class="checkout-actions">
+                    <button id="checkout-btn" class="btn btn-primary">Checkout</button>
+                    <button id="clear-cart-btn" class="btn btn-outline btn-sm">Clear</button>
+                    <button id="print-last-btn" class="btn btn-outline btn-sm">Print Last</button>
+                </div>
+            </div>
+
+            <!-- Sales History -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Sales History</h2>
+                    <button id="refresh-sales-btn" class="btn btn-outline btn-sm">Refresh</button>
+                </div>
+                <div id="sales-list"></div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- Admin Login Modal -->
+<div id="admin-login-modal" class="modal-overlay">
+    <div class="modal">
+        <h3>Admin Login</h3>
+        <form id="admin-login-form" class="form-grid">
+            <div class="form-group form-full">
+                <label>Username</label>
+                <input id="admin-username" type="text" required>
+            </div>
+            <div class="form-group form-full">
+                <label>Password</label>
+                <input id="admin-password" type="password" required>
+            </div>
+            <div id="admin-login-error" style="color:#dc3545;font-size:0.88rem;display:none" class="form-full"></div>
+            <div class="modal-actions form-full">
+                <button type="button" id="admin-login-cancel" class="btn btn-outline">Cancel</button>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cashier Login Modal -->
+<div id="cashier-login-modal" class="modal-overlay">
+    <div class="modal">
+        <h3>Cashier Login</h3>
+        <form id="cashier-login-form" class="form-grid">
+            <div class="form-group form-full">
+                <label>Username</label>
+                <input id="cashier-username-login" type="text" required>
+            </div>
+            <div class="form-group form-full">
+                <label>Password</label>
+                <input id="cashier-password-login" type="password" required>
+            </div>
+            <div id="cashier-login-error" style="color:#dc3545;font-size:0.88rem;display:none" class="form-full"></div>
+            <div class="modal-actions form-full">
+                <button type="button" id="cashier-login-cancel" class="btn btn-outline">Cancel</button>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- PIN Modal -->
+<div id="pin-modal" class="modal-overlay">
+    <div class="modal" style="text-align:center">
+        <h3>Confirm Payment</h3>
+        <p class="muted">Enter your 4-digit PIN</p>
+        <div id="pin-display" class="pin-display">_ _ _ _</div>
+        <div class="pin-keypad">
+            <button class="pin-key" data-digit="1">1</button>
+            <button class="pin-key" data-digit="2">2</button>
+            <button class="pin-key" data-digit="3">3</button>
+            <button class="pin-key" data-digit="4">4</button>
+            <button class="pin-key" data-digit="5">5</button>
+            <button class="pin-key" data-digit="6">6</button>
+            <button class="pin-key" data-digit="7">7</button>
+            <button class="pin-key" data-digit="8">8</button>
+            <button class="pin-key" data-digit="9">9</button>
+            <button class="pin-key" id="pin-clear" style="background:#ffebee;color:#d32f2f">Clear</button>
+            <button class="pin-key" data-digit="0">0</button>
+            <button class="pin-key" id="pin-backspace" style="background:#fff3e0;color:#f57c00">⌫</button>
+        </div>
+        <div class="modal-actions" style="justify-content:center">
+            <button id="pin-cancel" class="btn btn-outline">Cancel</button>
+            <button id="pin-confirm" class="btn btn-primary">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt (hidden, for printing) -->
+<div id="receipt-print" style="display:none"></div>
+
+<footer class="site-footer">
+    <div class="footer-row">
+        <div>
+            <div class="footer-brand">Ben's Beauty POS</div>
+            <div class="footer-contact">+254 748 648 015 · ben@beauty.example</div>
+        </div>
+        <div class="thank-marquee">
+            <span class="thank-scroll">Thank you for shopping at Ben's Beauty ❤ &nbsp;&nbsp; Thank you for shopping at Ben's Beauty ❤</span>
+        </div>
+        <div class="footer-contact">&copy; 2025 Ben's Beauty. All rights reserved.</div>
+    </div>
+</footer>
+
+<script src="js/pos.js"></script>
+</body>
+</html>
