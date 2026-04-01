@@ -168,9 +168,44 @@ class MockMpesaService {
 
     // Process M-Pesa callback (same as real service)
     async processCallback(callbackData) {
+        let connection;
         try {
-            const connection = await createConnection();
-            
+            connection = await createConnection();
+
+            // Ensure payment_callbacks table exists
+            await connection.execute(`
+                CREATE TABLE IF NOT EXISTS payment_callbacks (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    checkout_request_id VARCHAR(100),
+                    merchant_request_id VARCHAR(100),
+                    result_code INT,
+                    result_desc TEXT,
+                    mpesa_receipt_number VARCHAR(100),
+                    transaction_date DATETIME,
+                    phone_number VARCHAR(20),
+                    amount DECIMAL(10,2),
+                    raw_callback TEXT,
+                    processed BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+
+            // Ensure payments table exists
+            await connection.execute(`
+                CREATE TABLE IF NOT EXISTS payments (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    booking_id INT NOT NULL,
+                    mpesa_transaction_id VARCHAR(100),
+                    mpesa_receipt_number VARCHAR(100),
+                    phone_number VARCHAR(20) NOT NULL,
+                    amount DECIMAL(10,2) NOT NULL,
+                    status ENUM('pending','completed','failed','cancelled') DEFAULT 'pending',
+                    mpesa_response TEXT,
+                    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            `);
+
             // Save callback data
             await connection.execute(`
                 INSERT INTO payment_callbacks 
@@ -191,7 +226,6 @@ class MockMpesaService {
 
             // If payment was successful (ResultCode = 0)
             if (callbackData.ResultCode === 0) {
-                // Update booking payment status
                 const [mpesaRequest] = await connection.execute(
                     'SELECT booking_id FROM mpesa_requests WHERE checkout_request_id = ?',
                     [callbackData.CheckoutRequestID]
@@ -199,8 +233,7 @@ class MockMpesaService {
 
                 if (mpesaRequest.length > 0) {
                     const bookingId = mpesaRequest[0].booking_id;
-                    
-                    // Get booking details for SMS
+
                     const [bookings] = await connection.execute(`
                         SELECT b.reference_number, b.customer_phone, b.total_amount,
                                v.route_from, v.route_to, t.travel_date, t.departure_time
@@ -209,14 +242,12 @@ class MockMpesaService {
                         JOIN vehicles v ON t.vehicle_id = v.id
                         WHERE b.id = ?
                     `, [bookingId]);
-                    
-                    // Update booking status to paid
+
                     await connection.execute(
                         'UPDATE bookings SET payment_status = "paid" WHERE id = ?',
                         [bookingId]
                     );
 
-                    // Create payment record
                     await connection.execute(`
                         INSERT INTO payments 
                         (booking_id, mpesa_transaction_id, mpesa_receipt_number, phone_number, amount, status, mpesa_response)
@@ -231,35 +262,27 @@ class MockMpesaService {
                     ]);
 
                     console.log(`✅ Mock payment completed for booking #${bookingId} - Receipt: ${callbackData.MpesaReceiptNumber}`);
-                    
-                    // Send payment confirmation SMS
+
                     if (bookings.length > 0) {
-                        const booking = bookings[0];
-                        const { sendPaymentConfirmation } = require('./sms.service');
-                        
-                        const paymentDetails = {
-                            mpesa_receipt: callbackData.MpesaReceiptNumber,
-                            amount: callbackData.Amount,
-                            reference_number: booking.reference_number
-                        };
-                        
-                        // Send SMS asynchronously
-                        sendPaymentConfirmation(booking.customer_phone, paymentDetails)
-                            .then(result => {
-                                console.log('✅ Payment confirmation SMS sent:', result);
-                            })
-                            .catch(err => {
-                                console.error('❌ Failed to send payment confirmation SMS:', err);
-                            });
+                        try {
+                            const { sendPaymentConfirmation } = require('./sms.service');
+                            const booking = bookings[0];
+                            sendPaymentConfirmation(booking.customer_phone, {
+                                mpesa_receipt: callbackData.MpesaReceiptNumber,
+                                amount: callbackData.Amount,
+                                reference_number: booking.reference_number
+                            }).catch(err => console.error('SMS error:', err));
+                        } catch (e) { console.error('SMS service error:', e.message); }
                     }
                 }
             }
 
-            await connection.end();
             return { success: true };
         } catch (error) {
             console.error('Error processing mock M-Pesa callback:', error);
             return { success: false, error: error.message };
+        } finally {
+            if (connection) await connection.end();
         }
     }
 }

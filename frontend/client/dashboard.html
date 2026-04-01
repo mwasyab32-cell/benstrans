@@ -231,6 +231,9 @@
                             <button class="btn btn-small" style="background: #51cf66;" onclick="payNow(${booking.id})">
                                 Pay Now
                             </button>
+                            <button class="btn btn-small" style="background: #339af0;" onclick="verifyPayment(${booking.id}, this)">
+                                Verify Payment
+                            </button>
                         ` : ''}
                     </div>
                 </div>
@@ -268,12 +271,31 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('✅ Payment request sent!\n\nCheck your phone for the M-Pesa prompt.\nEnter your PIN to complete payment.');
+                    alert('✅ Payment request sent!\n\nCheck your phone for the M-Pesa prompt.\nEnter your PIN to complete payment.\n\nThe page will auto-refresh in 15 seconds.');
                     
-                    // Reload bookings after a delay
-                    setTimeout(() => {
-                        loadBookings();
-                    }, 3000);
+                    // Auto-poll for payment confirmation
+                    let attempts = 0;
+                    const maxAttempts = 6;
+                    const pollInterval = setInterval(async () => {
+                        attempts++;
+                        try {
+                            const verifyRes = await fetch(`${API_BASE}/payments/verify/${bookingId}`, {
+                                headers: getAuthHeaders()
+                            });
+                            const verifyData = await verifyRes.json();
+                            if (verifyData.status === 'paid') {
+                                clearInterval(pollInterval);
+                                alert('✅ Payment confirmed! Your booking is now paid.');
+                                loadBookings();
+                            } else if (attempts >= maxAttempts) {
+                                clearInterval(pollInterval);
+                                loadBookings();
+                            }
+                        } catch (e) {
+                            if (attempts >= maxAttempts) { clearInterval(pollInterval); loadBookings(); }
+                        }
+                    }, 5000);
+
                 } else {
                     alert('❌ Payment failed: ' + (data.error || 'Unknown error'));
                     btn.disabled = false;
@@ -286,6 +308,30 @@
                 btn.disabled = false;
                 btn.textContent = originalText;
             });
+        }
+
+        async function verifyPayment(bookingId, btn) {
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+            try {
+                const res = await fetch(`${API_BASE}/payments/verify/${bookingId}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (data.status === 'paid') {
+                    alert('✅ Payment confirmed! Your booking is now paid.');
+                    loadBookings();
+                } else {
+                    alert('⏳ ' + data.message);
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            } catch (e) {
+                alert('❌ Could not verify. Please try again.');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
 
         function logout() {

@@ -224,9 +224,97 @@ const cancelBooking = async (req, res) => {
     }
 };
 
+// Manually verify and complete a pending payment (for when callback fails)
+const verifyPayment = async (req, res) => {
+    try {
+        const { booking_id } = req.params;
+        const client_id = req.user.id;
+        const connection = await createConnection();
+
+        // Get booking + latest mpesa request
+        const [bookings] = await connection.execute(`
+            SELECT b.*, mr.checkout_request_id, mr.status as mpesa_status
+            FROM bookings b
+            LEFT JOIN mpesa_requests mr ON b.id = mr.booking_id
+            WHERE b.id = ? AND b.client_id = ?
+            ORDER BY mr.created_at DESC LIMIT 1
+        `, [booking_id, client_id]);
+
+        if (bookings.length === 0) {
+            await connection.end();
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+
+        const booking = bookings[0];
+
+        if (booking.payment_status === 'paid') {
+            await connection.end();
+            return res.json({ status: 'paid', message: 'Already paid' });
+        }
+
+        // If no checkout request, payment was never initiated
+        if (!booking.checkout_request_id) {
+            await connection.end();
+            return res.json({ status: 'pending', message: 'Payment not yet initiated' });
+        }
+
+        // Query M-Pesa for real status
+        try {
+            const statusResult = await mpesaService.checkSTKPushStatus(booking.checkout_request_id);
+
+            // ResultCode 0 = success
+            if (statusResult.ResultCode === '0' || statusResult.ResultCode === 0) {
+                // Mark as paid
+                await connection.execute(
+                    'UPDATE bookings SET payment_status = "paid" WHERE id = ?',
+                    [booking_id]
+                );
+
+                // Ensure payments table exists and insert record
+                await connection.execute(`
+                    CREATE TABLE IF NOT EXISTS payments (
+                        id INT PRIMARY KEY AUTO_INCREMENT,
+                        booking_id INT NOT NULL,
+                        mpesa_transaction_id VARCHAR(100),
+                        mpesa_receipt_number VARCHAR(100),
+                        phone_number VARCHAR(20) NOT NULL,
+                        amount DECIMAL(10,2) NOT NULL,
+                        status ENUM('pending','completed','failed','cancelled') DEFAULT 'pending',
+                        mpesa_response TEXT,
+                        transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    )
+                `);
+
+                const [existing] = await connection.execute(
+                    'SELECT id FROM payments WHERE booking_id = ?', [booking_id]
+                );
+                if (existing.length === 0) {
+                    await connection.execute(
+                        'INSERT INTO payments (booking_id, mpesa_transaction_id, phone_number, amount, status) VALUES (?,?,?,?,?)',
+                        [booking_id, booking.checkout_request_id, booking.customer_phone || '', booking.total_amount, 'completed']
+                    );
+                }
+
+                await connection.end();
+                return res.json({ status: 'paid', message: 'Payment verified and confirmed' });
+            }
+        } catch (e) {
+            console.error('STK status check error:', e.message);
+        }
+
+        await connection.end();
+        res.json({ status: 'pending', message: 'Payment still pending. Please wait or try paying again.' });
+    } catch (error) {
+        console.error('Verify payment error:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     initiatePayment,
     checkPaymentStatus,
+    verifyPayment,
     mpesaCallback,
     getPaymentHistory,
     cancelBooking

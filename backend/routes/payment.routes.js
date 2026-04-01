@@ -1,7 +1,8 @@
 const express = require('express');
 const { 
     initiatePayment, 
-    checkPaymentStatus, 
+    checkPaymentStatus,
+    verifyPayment,
     mpesaCallback, 
     getPaymentHistory, 
     cancelBooking 
@@ -14,6 +15,7 @@ const router = express.Router();
 // Client payment routes (require authentication)
 router.post('/initiate', authenticateToken, checkRole(['client']), initiatePayment);
 router.get('/status/:booking_id', authenticateToken, checkRole(['client']), checkPaymentStatus);
+router.get('/verify/:booking_id', authenticateToken, checkRole(['client']), verifyPayment);
 router.get('/history', authenticateToken, checkRole(['client']), getPaymentHistory);
 router.delete('/cancel/:booking_id', authenticateToken, checkRole(['client']), cancelBooking);
 
