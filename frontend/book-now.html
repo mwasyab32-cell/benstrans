@@ -361,6 +361,9 @@
                         <div class="legend-item"><span class="seat selected"></span> Your Selection</div>
                         <div class="legend-item"><span class="seat booked"></span> Booked</div>
                     </div>
+                    <p style="text-align:center; color:#667eea; font-size:13px; margin-bottom:12px;">
+                        You can select up to <strong>4 seats</strong> per booking
+                    </p>
                     <div id="seatMap"></div>
                     <div class="selected-seats-info">
                         <p><strong>Selected Seats:</strong> <span id="selectedSeatsList">None</span></p>
@@ -594,17 +597,15 @@
                 return;
             }
             
-            // Load booked seats for this trip
             try {
                 const response = await fetch(`${API_BASE}/vehicles/trips/${bookingData.trip.id}/seats`);
                 const data = await response.json();
-                const bookedSeats = data.booked_seats || [];
-                
+                // booked_seats is now returned by the API — seats already taken by others
+                const bookedSeats = Array.isArray(data.booked_seats) ? data.booked_seats : [];
                 displaySeatMap(bookingData.trip.available_seats, bookedSeats);
                 goToStep(2.5);
             } catch (error) {
                 console.error('Error loading seat data:', error);
-                // If API fails, show all seats as available
                 displaySeatMap(bookingData.trip.available_seats, []);
                 goToStep(2.5);
             }
@@ -688,6 +689,11 @@
                 element.classList.remove('selected');
                 element.classList.add('available');
             } else {
+                // Enforce max 4 seats per booking
+                if (bookingData.selectedSeats.length >= 4) {
+                    alert('Maximum 4 seats allowed per booking. Deselect a seat first.');
+                    return;
+                }
                 // Select
                 bookingData.selectedSeats.push(seatNumber);
                 element.classList.remove('available');
@@ -704,13 +710,13 @@
             
             document.getElementById('selectedSeatsList').textContent = 
                 count > 0 ? bookingData.selectedSeats.join(', ') : 'None';
-            document.getElementById('selectedSeatsTotal').textContent = `KSh ${total}`;
+            document.getElementById('selectedSeatsTotal').textContent = `KSh ${total.toFixed(2)}`;
             
             const continueBtn = document.getElementById('continueToDetails2');
             continueBtn.disabled = count === 0;
             continueBtn.textContent = count > 0 
-                ? `Continue with ${count} seat${count > 1 ? 's' : ''}` 
-                : 'Select at least one seat';
+                ? `Continue with ${count} seat${count > 1 ? 's' : ''} — KSh ${total.toFixed(2)}`
+                : 'Select at least one seat (max 4)';
             
             bookingData.seats = count;
         }
@@ -873,8 +879,7 @@
                 
                 const data = await response.json();
                 
-                if (response.ok) {
-                    const receiptUrl = `receipt.html?ref=${data.booking.reference_number}`;
+                if (response.ok) {                    const receiptUrl = `receipt.html?ref=${data.booking.reference_number}`;
                     
                     let message = `✅ Booking successful!\n\n`;
                     message += `📋 Reference: ${data.booking.reference_number}\n`;
@@ -906,7 +911,14 @@
                         window.location.href = 'index.html';
                     }, 2000);
                 } else {
-                    alert('Booking failed: ' + data.error);
+                    // If seats were taken, go back to seat selection and refresh
+                    if (data.error && data.error.includes('already booked')) {
+                        alert('❌ ' + data.error + '\n\nThe seat map will refresh to show current availability.');
+                        goToStep(2.5);
+                        proceedToSeatSelection();
+                    } else {
+                        alert('Booking failed: ' + data.error);
+                    }
                     btn.disabled = false;
                     btn.textContent = 'Confirm & Pay via M-Pesa';
                 }

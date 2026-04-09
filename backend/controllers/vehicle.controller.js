@@ -309,6 +309,7 @@ const getTripSeats = async (req, res) => {
     try {
         const { trip_id } = req.params;
         connection = await createConnection();
+
         const [trips] = await connection.execute(`
             SELECT t.*, v.total_seats, v.vehicle_number,
                    (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
@@ -318,8 +319,25 @@ const getTripSeats = async (req, res) => {
             WHERE t.id = ?
             GROUP BY t.id
         `, [trip_id]);
+
         if (trips.length === 0) return res.status(404).json({ error: 'Trip not found' });
-        res.json(trips[0]);
+
+        // Get all booked seat numbers for this trip
+        const [bookings] = await connection.execute(
+            "SELECT seat_numbers FROM bookings WHERE trip_id = ? AND payment_status IN ('paid', 'pending') AND seat_numbers IS NOT NULL",
+            [trip_id]
+        );
+
+        // Flatten all booked seat numbers into one array
+        const bookedSeats = [];
+        for (const booking of bookings) {
+            try {
+                const seats = JSON.parse(booking.seat_numbers);
+                if (Array.isArray(seats)) bookedSeats.push(...seats);
+            } catch (e) {}
+        }
+
+        res.json({ ...trips[0], booked_seats: bookedSeats });
     } catch (error) {
         console.error('GET TRIP SEATS ERROR:', error);
         res.status(500).json({ error: error.message });

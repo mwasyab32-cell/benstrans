@@ -36,24 +36,34 @@ const createGuestBooking = async (req, res) => {
             let accountCreated = false;
             
             if (existingUsers.length > 0) {
-                // User exists, use their ID
                 userId = existingUsers[0].id;
             } else {
-                // Create new client account automatically with ID number as password
-                const defaultPassword = await bcrypt.hash(customer_id_number, 10); // Use ID number as password
-                
+                const defaultPassword = await bcrypt.hash(customer_id_number, 10);
                 const [userResult] = await connection.execute(
                     'INSERT INTO users (name, email, phone, id_number, password, role, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
                     [customer_name, customer_email, customer_phone, customer_id_number, defaultPassword, 'client', 'approved']
                 );
-                
                 userId = userResult.insertId;
                 accountCreated = true;
+            }
+
+            // Validate seat count (max 4 per booking)
+            if (seats_booked > 4) {
+                await connection.rollback();
+                await connection.end();
+                return res.status(400).json({ error: 'Maximum 4 seats allowed per booking' });
+            }
+
+            // Validate seat_numbers match seats_booked
+            if (!seat_numbers || !Array.isArray(seat_numbers) || seat_numbers.length !== seats_booked) {
+                await connection.rollback();
+                await connection.end();
+                return res.status(400).json({ error: 'Seat selection does not match number of seats booked' });
             }
             
             // Get trip details
             const [trips] = await connection.execute(`
-                SELECT t.*, v.price, v.route_from, v.route_to, v.vehicle_number,
+                SELECT t.*, v.price, v.route_from, v.route_to, v.vehicle_number, v.total_seats,
                        (t.available_seats - COALESCE(SUM(b.seats_booked), 0)) as remaining_seats
                 FROM trips t
                 JOIN vehicles v ON t.vehicle_id = v.id
@@ -69,6 +79,41 @@ const createGuestBooking = async (req, res) => {
             }
             
             const trip = trips[0];
+
+            // Validate seat numbers are within vehicle range
+            const invalidSeats = seat_numbers.filter(s => s < 1 || s > trip.total_seats);
+            if (invalidSeats.length > 0) {
+                await connection.rollback();
+                await connection.end();
+                return res.status(400).json({ error: `Invalid seat numbers: ${invalidSeats.join(', ')}` });
+            }
+
+            // Check for duplicate seat numbers in the request
+            const uniqueSeats = [...new Set(seat_numbers)];
+            if (uniqueSeats.length !== seat_numbers.length) {
+                await connection.rollback();
+                await connection.end();
+                return res.status(400).json({ error: 'Duplicate seat numbers in your selection' });
+            }
+
+            // Check which seats are already taken
+            const [existingBookings] = await connection.execute(
+                "SELECT seat_numbers FROM bookings WHERE trip_id = ? AND payment_status IN ('paid', 'pending') AND seat_numbers IS NOT NULL",
+                [trip_id]
+            );
+            const takenSeats = [];
+            for (const b of existingBookings) {
+                try {
+                    const s = JSON.parse(b.seat_numbers);
+                    if (Array.isArray(s)) takenSeats.push(...s);
+                } catch (e) {}
+            }
+            const conflictSeats = seat_numbers.filter(s => takenSeats.includes(s));
+            if (conflictSeats.length > 0) {
+                await connection.rollback();
+                await connection.end();
+                return res.status(400).json({ error: `Seat(s) ${conflictSeats.join(', ')} already booked. Please select different seats.` });
+            }
             
             if (trip.remaining_seats < seats_booked) {
                 await connection.rollback();
